@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: ia-backend
+    ports:
+      - "8000:8000"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      # Optionnel : monter le cache pour éviter de retélécharger les modèles NeMo à chaque fois
+      - ~/.cache/torch:/root/.cache/torch
+
+  frontend:
+    build: ./frontend
+    container_name: ia-frontend
+    ports:
+      - "8501:8501"
+    environment:
+      - API_URL=http://backend:8001
+    depends_on:
+      - backend
