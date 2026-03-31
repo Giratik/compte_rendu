@@ -1,5 +1,5 @@
 # backend/Dockerfile
-FROM python:3.10-slim
+FROM python:3.12.3
 
 # FFmpeg est obligatoire pour WhisperX et Pyannote, git pour cloner WhisperX
 RUN apt-get update && apt-get install -y \

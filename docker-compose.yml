@@ -2,7 +2,9 @@ version: '3.8'
 
 services:
   backend:
-    build: ./backend
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: ia-backend
     ports:
       - "8000:8000"
@@ -15,12 +17,17 @@ services:
               capabilities: [gpu]
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
+      # Si ton pyannote a besoin d'un token HuggingFace pour télécharger des modèles, mets-le ici :
+      # - HUGGINGFACE_CO_TOKEN=hf_ton_token_ici
     volumes:
-      # Optionnel : monter le cache pour éviter de retélécharger les modèles NeMo à chaque fois
+      # Pour éviter que WhisperX et Pyannote ne retéléchargent les modèles à chaque redémarrage
+      - ~/.cache/huggingface:/root/.cache/huggingface
       - ~/.cache/torch:/root/.cache/torch
 
   frontend:
-    build: ./frontend
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
     container_name: ia-frontend
     ports:
       - "8501:8501"
