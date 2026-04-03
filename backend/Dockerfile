@@ -1,33 +1,41 @@
-# On ne garde que FFmpeg (indispensable pour lire les fichiers audio)
+# backend/Dockerfile
+# Image optimisée pour CUDA et PyTorch (basée sur Ubuntu 22.04)
 FROM nvidia/cuda:12.1.0-cudnn8-runtime-ubuntu22.04
 
-# Fix pour les erreurs de signature GPG
+# Évite les prompts bloquants lors de l'installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# 1. Nettoyage des clés GPG NVIDIA (sécurité anti-crash)
+# 2. Installation de Python 3.10 (natif), FFmpeg et Git
 RUN rm -f /etc/apt/sources.list.d/cuda.list \
     && rm -f /etc/apt/sources.list.d/nvidia-ml.list \
-    && apt-get clean \
-    && apt-get update --fix-missing || true
-
-# Maintenant on installe les paquets
-RUN apt-get update && apt-get install -y \
+    && apt-get update && apt-get install -y \
+    python3 \
     python3-pip \
     python3-dev \
     ffmpeg \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
-# Créer un lien symbolique pour que 'python' pointe vers 'python3'
-RUN ln -s /usr/bin/python3 /usr/bin/python
+# Forcer le système à utiliser la commande 'python' pour appeler 'python3'
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1
 
 WORKDIR /app
 
-# 1. Installation de PyTorch (Version CUDA pour le GPU)
+# Installation de PyTorch CUDA 12.1
 RUN pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
 
-# 2. Installation de toutes tes librairies d'un seul coup (y compris WhisperX et Pyannote)
+# Installation des dépendances
 COPY requirements_backend.txt .
 RUN pip install --no-cache-dir -r requirements_backend.txt
+RUN pip install pyannote.audio
+RUN pip install git+https://github.com/m-bain/whisperX.git
 
-# 3. Copie de ton code et de tes ressources
+# Copie du code source
 COPY . .
 
+# Expose le port de FastAPI
+EXPOSE 8000
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "2"]
+# Lancement de l'API sur le port 8001 (1 seul worker pour éviter de saturer la VRAM)
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "1"]

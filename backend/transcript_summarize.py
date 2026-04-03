@@ -1,7 +1,7 @@
 import PyPDF2
 import docx
 import ollama
-from backend.ollama_client import inferring_ollama
+from ollama_client import inferring_ollama
 
 def summarize_chunk(chunk, chunk_index, total_chunks, temperature=0.1, model_name="mistral-nemo", passes=1):
     """Étape 1 (Map) : Extraction des faits avec option de double vérification."""

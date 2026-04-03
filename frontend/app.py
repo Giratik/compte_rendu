@@ -8,8 +8,9 @@ import requests
 st.set_page_config(page_title="Transcription & Résumé", layout="wide")
 st.title("Transcription & Compte Rendu de réunion")
 
-# L'URL de ton API FastAPI
-API_URL = "http://127.0.0.1:8001"
+import os
+# Récupère l'URL définie dans docker-compose, sinon utilise localhost en local
+API_URL = os.getenv("API_URL", "http://localhost:8001")
 
 # Initialisation des variables de session
 for key in ["transcript_text", "format_instructions_fichier", "final_summary", "combined_notes"]:
@@ -23,34 +24,33 @@ light_model = "mistral-nemo"
 heavy_model = "mistral-small:22b"
 chosen_model = heavy_model
 
-#@st.cache_data(ttl=60)
-#def charger_templates_api():
-#    api_url = os.environ.get("API_URL", "http://backend:8001")
-#    url = f"{api_url}/ressources/files"
-#    url = 
-#    
-#    try:
-#        reponse = requests.get(url, timeout=10)
-#        reponse.raise_for_status()
-#        return reponse.json()
-#    except requests.exceptions.RequestException as e:
-#        st.error(f"Erreur lors de la récupération des templates : {e}")
-#        return []
-#
-## Appel de la fonction
-#templates = charger_templates_api()
-
-@st.cache_data # Permet de ne pas recharger le fichier à chaque interaction
-def charger_templates(chemin_fichier):
-    try:
-        with open(chemin_fichier, 'r', encoding='utf-8') as f:
-            donnees = json.load(f)
-            return donnees['templates']
-    except FileNotFoundError:
-        st.error(f"Le fichier {chemin_fichier} est introuvable.")
-        return []
+@st.cache_data(ttl=60)
+def charger_templates_api():
+    api_url = os.environ.get("API_URL", "http://backend:8001")
+    url = f"{api_url}/ressources/files"
     
-templates = charger_templates('backend/ressources/templates_reunions.json')
+    try:
+        reponse = requests.get(url, timeout=10)
+        reponse.raise_for_status()
+        return reponse.json()
+    except requests.exceptions.RequestException as e:
+        st.error(f"Erreur lors de la récupération des templates : {e}")
+        return []
+
+# Appel de la fonction
+templates = charger_templates_api()
+
+#@st.cache_data # Permet de ne pas recharger le fichier à chaque interaction
+#def charger_templates(chemin_fichier):
+#    try:
+#        with open(chemin_fichier, 'r', encoding='utf-8') as f:
+#            donnees = json.load(f)
+#            return donnees['templates']
+#    except FileNotFoundError:
+#        st.error(f"Le fichier {chemin_fichier} est introuvable.")
+#        return []
+#    
+#templates = charger_templates('ressources/templates_reunions.json')
 
 
 

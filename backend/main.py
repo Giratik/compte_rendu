@@ -10,11 +10,12 @@ import gc
 import whisperx
 import io
 import json
+import traceback
 
 # Import de tes fonctions locales existantes
-from backend.transcript_summarize import summarize_chunk, synthesize_summaries, creation_template_from_file
-from backend.conversion_output import generer_docx
-from backend.email_utils import envoyer_email_notification
+from transcript_summarize import summarize_chunk, synthesize_summaries, creation_template_from_file
+from conversion_output import generer_docx
+from email_utils import envoyer_email_notification
 #from backend.ollama_client import inferring_ollama
 
 app = FastAPI(title="API Transcription & Résumé")
@@ -50,7 +51,8 @@ async def get_templates():
             donnees = json.load(f)
             return donnees['templates']
     except FileNotFoundError:
-        return {"error": "Fichier introuvable"}, 404
+        # C'est la bonne façon de remonter une erreur 404 à Streamlit
+        raise HTTPException(status_code=404, detail="Fichier introuvable")
 
 
 
@@ -79,7 +81,7 @@ async def transcribe_audio(file: UploadFile = File(...), model_choice: str = For
         ]
         subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-        device = "cuda" if torch.cuda.is_available() else "cpu" # error
+        device = "cuda" 
         batch_size = 16 
         compute_type = "float16" 
         asr_options = {"beam_size": 5, "condition_on_previous_text": False, "compression_ratio_threshold": 2.4}
@@ -112,6 +114,8 @@ async def transcribe_audio(file: UploadFile = File(...), model_choice: str = For
         return {"transcript": full_text}
 
     except Exception as e:
+        print("ERREUR CRITIQUE DANS LA TRANSCRIPTION :")
+        traceback.print_exc()  # Force l'affichage de l'erreur dans les logs Docker
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         if os.path.exists(tmp_input_path): os.remove(tmp_input_path)
