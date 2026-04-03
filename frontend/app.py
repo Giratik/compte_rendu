@@ -8,7 +8,7 @@ st.set_page_config(page_title="Transcription & Résumé", layout="wide")
 st.title("Transcription & Compte Rendu de réunion")
 
 # L'URL de ton API FastAPI
-API_URL = "http://localhost:8001"
+API_URL = "http://127.0.0.1:8001"
 
 # Initialisation des variables de session
 for key in ["transcript_text", "format_instructions_fichier", "final_summary", "combined_notes"]:
