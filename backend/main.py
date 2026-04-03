@@ -9,11 +9,13 @@ import torch
 import gc
 import whisperx
 import io
+import json
 
 # Import de tes fonctions locales existantes
-from backend.double_down import summarize_chunk, synthesize_summaries, creation_template_from_file
+from backend.transcript_summarize import summarize_chunk, synthesize_summaries, creation_template_from_file
 from backend.conversion_output import generer_docx
 from backend.email_utils import envoyer_email_notification
+#from backend.ollama_client import inferring_ollama
 
 app = FastAPI(title="API Transcription & Résumé")
 
@@ -38,6 +40,19 @@ class SynthesizeRequest(BaseModel):
 #pas implémenté
 class DocxRequest(BaseModel):
     markdown_text: str
+
+
+@app.get("/ressources/files")
+async def get_templates():
+    chemin_fichier = 'ressources/templates_reunions.json'
+    try:
+        with open(chemin_fichier, 'r', encoding='utf-8') as f:
+            donnees = json.load(f)
+            return donnees['templates']
+    except FileNotFoundError:
+        return {"error": "Fichier introuvable"}, 404
+
+
 
 # --- 1. ENDPOINT DE TRANSCRIPTION ---
 @app.post("/transcribe/")
@@ -112,7 +127,10 @@ async def api_summarize_chunk(req: ChunkRequest):
         )
         return {"summary": resume}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"ERREUR CRITIQUE CAPTURÉE : {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {"error": str(e)}
 
 @app.post("/synthesize/")
 async def api_synthesize(req: SynthesizeRequest):

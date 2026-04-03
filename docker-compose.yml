@@ -7,16 +7,11 @@ services:
       dockerfile: Dockerfile
     container_name: ia-backend
     ports:
-      - "8000:8000"
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+    - "8001:8001" # Externe 8001 -> Interne 8001 (évite conflit avec App#1 qui est sur 8000)
+
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
+      - OLLAMA_URL=http://10.75.12.10:11434 
       # Si ton pyannote a besoin d'un token HuggingFace pour télécharger des modèles, mets-le ici :
       # - HUGGINGFACE_CO_TOKEN=hf_ton_token_ici
     volumes:
@@ -30,8 +25,15 @@ services:
       dockerfile: Dockerfile
     container_name: ia-frontend
     ports:
-      - "8501:8501"
+      - "8502:8501" # Externe 8502 -> Interne 8501 (évite conflit avec App#1 qui est sur 8501)
     environment:
+      - LD_LIBRARY_PATH=/usr/local/lib/python3.12/site-packages/nvidia/cudnn/lib
       - API_URL=http://backend:8001
+      - STREAMLIT_SERVER_MAX_UPLOAD_SIZE=5000
+      - STREAMLIT_BROWSER_SERVER_ADDRESS=10.75.12.10
+      # Le port que l'utilisateur tape dans son navigateur
+      - STREAMLIT_BROWSER_SERVER_PORT=8502
+      # (Optionnel) Pour supprimer le message de configuration email au démarrage
+      - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
     depends_on:
       - backend

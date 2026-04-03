@@ -3,7 +3,7 @@ FROM python:3.12.3
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY requirements_frontend.txt .
 RUN pip install --no-cache-dir -r requirements_frontend.txt
 
 COPY app.py .

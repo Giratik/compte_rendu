@@ -1,6 +1,7 @@
 import streamlit as st
 import time
 import json
+import os
 import requests
 
 # --- Configuration ---
@@ -8,7 +9,7 @@ st.set_page_config(page_title="Transcription & Résumé", layout="wide")
 st.title("Transcription & Compte Rendu de réunion")
 
 # L'URL de ton API FastAPI
-API_URL = "http://localhost:8001"
+API_URL = "http://127.0.0.1:8001"
 
 # Initialisation des variables de session
 for key in ["transcript_text", "format_instructions_fichier", "final_summary", "combined_notes"]:
@@ -22,6 +23,22 @@ light_model = "mistral-nemo"
 heavy_model = "mistral-small:22b"
 chosen_model = heavy_model
 
+#@st.cache_data(ttl=60)
+#def charger_templates_api():
+#    api_url = os.environ.get("API_URL", "http://backend:8001")
+#    url = f"{api_url}/ressources/files"
+#    url = 
+#    
+#    try:
+#        reponse = requests.get(url, timeout=10)
+#        reponse.raise_for_status()
+#        return reponse.json()
+#    except requests.exceptions.RequestException as e:
+#        st.error(f"Erreur lors de la récupération des templates : {e}")
+#        return []
+#
+## Appel de la fonction
+#templates = charger_templates_api()
 
 @st.cache_data # Permet de ne pas recharger le fichier à chaque interaction
 def charger_templates(chemin_fichier):
@@ -33,11 +50,15 @@ def charger_templates(chemin_fichier):
         st.error(f"Le fichier {chemin_fichier} est introuvable.")
         return []
     
-templates = charger_templates('ressources/templates_reunions.json')
+templates = charger_templates('backend/ressources/templates_reunions.json')
+
+
 
 # --- CHOIX DU MODE D'ENTRÉE ---
-st.write("### Étape 1 : Source du texte")
-user_email = st.text_input("📩 Votre adresse email (Optionnel, pour recevoir une notification à la fin) = > ça fonctionne pas ", placeholder="jean.dupont@entreprise.com")
+#st.write("### Étape 1 : Source du texte")
+#user_email = st.text_input("📩 Votre adresse email (Optionnel, pour recevoir une notification à la fin) = > ça fonctionne pas ", placeholder="jean.duponteaudeparis.fr")
+
+user_email = None
 input_mode = st.radio(
     "Comment voulez-vous fournir le texte ?",
     ["Transcrire un fichier Audio/Vidéo", "Uploader un fichier Texte existant (.txt)"],
@@ -294,8 +315,6 @@ Tu es un assistant de direction spécialisé dans la synthèse d'informations. �
                 res_docx = requests.post(f"{API_URL}/generate_docx/", json=payload_docx)
                 
                 if res_docx.status_code == 200:
-                    st.text("la génération du word n'est pas encore top")
-                    st.text("L'option générer un résumé de réunion utilise actuellement la même structure de rédaction que le compte-rendu")
                     st.download_button(
                         label="📄 Télécharger en Word (.docx)",
                         data=res_docx.content, # Les bytes bruts du fichier Word

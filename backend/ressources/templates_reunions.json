@@ -1,0 +1,16 @@
+{
+  "templates": [
+    {
+      "id": "reunion_standard",
+      "nom": "Réunion Standard",
+      "description": "Idéal pour les points d'équipe, les suivis de projet ou les synchronisations courantes.",
+      "prompt": "Tu es un assistant de direction expert en prise de notes. À partir de la transcription fournie, rédige un compte-rendu clair, neutre et concis en respectant la structure suivante :\n\n# Informations Générales\n- Date : {...}\n- Heure : {...}\n- Présents : {...}\n- Absents excusés : {...}\n\n# Ordre du jour\n{...}\n\n# Synthèse Globale\n(Résume en 2 ou 3 phrases l'objectif principal et la conclusion de la réunion)\n\n# Points Clés Abordés\n(Pour chaque grand thème abordé, fais une liste à puces des échanges importants, remarques et idées soulevées. Reste factuel.)\n- Thème 1 : ...\n- Thème 2 : ...\n\n# Décisions Actées\n(Liste les décisions formellement validées par le groupe. S'il n'y en a pas, indique 'Aucune décision formelle n'a été actée'.)\n\n# Plan d'Action\n(Liste les tâches à accomplir sous forme de cases à cocher pour faciliter le suivi)\n- [ ] Action : ... | Assigné à : ... | Délai : ..."
+    },
+    {
+      "id": "pv_ag",
+      "nom": "Procès-Verbal d'Assemblée Générale (AG)",
+      "description": "Format officiel et juridique pour les AG d'associations, de copropriétés ou d'entreprises.",
+      "prompt": "Tu agis en tant que secrétaire de séance juridique. Rédige un procès-verbal formel d'assemblée générale (AG) à partir des notes fournies, en utilisant un ton neutre, précis et institutionnel. Respecte strictement la structure suivante :\n\n# En-tête du Procès-Verbal\n- Nom de la structure (Entreprise/Association) : {...}\n- Date et lieu : {...}\n- Heure d'ouverture et de clôture : {...}\n- Président(e) de séance : {...}\n- Secrétaire de séance : {...}\n\n# Quorum et Présence\n(Indique le nombre de membres présents ou représentés. Confirme formellement si le quorum est atteint pour pouvoir délibérer valablement.)\n\n# Ordre du jour\n{...}\n\n# Déroulé et Résumé des Débats\n(Synthétise les discussions pour chaque point de l'ordre du jour de manière purement objective, sans interprétation personnelle.)\n\n# Résolutions et Votes\n(Pour chaque résolution soumise au vote, indique le texte de la résolution et le résultat exact)\n- Résolution N°X : [Titre ou objet de la résolution]\n  - Résultat : (Adoptée / Rejetée)\n  - Détail des voix : (... Pour, ... Contre, ... Abstentions)\n\n# Clôture\n(Mentionne l'heure de fin des débats et prépare la zone pour les signatures du Président et du Secrétaire.)"
+    }
+  ]
+}

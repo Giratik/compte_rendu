@@ -1,6 +1,7 @@
 import PyPDF2
 import docx
 import ollama
+from backend.ollama_client import inferring_ollama
 
 def summarize_chunk(chunk, chunk_index, total_chunks, temperature=0.1, model_name="mistral-nemo", passes=1):
     """Étape 1 (Map) : Extraction des faits avec option de double vérification."""
@@ -16,18 +17,24 @@ Sois exhaustif, concis et utilise des listes à puces. Ne fais aucune introducti
 Extrait à analyser :
 {chunk}"""
 
-    premier_jet = ollama.chat(
-        model=model_name,
+    #premier_jet = ollama.chat(
+    #    model=model_name,
+    #    messages=[{"role": "user", "content": prompt_1}],
+    #    options= {
+    #        "seed": 12345,
+    #        "temperature": temperature,
+    #        "keep_alive": "5m", 
+    #        "num_ctx": 8192 # Suffisant pour un morceau
+    #    }
+    #)
+    
+    premier_jet = inferring_ollama(
         messages=[{"role": "user", "content": prompt_1}],
-        options= {
-            "seed": 12345,
-            "temperature": temperature,
-            "keep_alive": "5m", 
-            "num_ctx": 8192 # Suffisant pour un morceau
-        }
-    )
-        
-
+        model=model_name,
+        temperature = temperature,
+        stream = False,
+        context_size = 8192,
+        )
     
     # Si on a demandé un seul passage, on s'arrête là
     if passes == 1:
@@ -45,16 +52,24 @@ Ta mission : Ce brouillon a oublié des détails techniques, des arguments ou de
 Identifie ce qui manque, et réécris une NOUVELLE liste à puces fusionnée, ENRICHIE et 100% EXHAUSTIVE. 
 Ne fais aucune introduction, donne uniquement la liste finale améliorée."""
 
-    payload_2 = ollama.chat(
-        model=model_name,
+    #payload_2 = ollama.chat(
+    #    model=model_name,
+    #    messages=[{"role": "user", "content": prompt_2}],
+    #    options= {
+    #        "seed": 12345,
+    #        "temperature": temperature,
+    #        "keep_alive": "5m", 
+    #        "num_ctx": 8192 # Suffisant pour un morceau
+    #    }
+    #)
+    payload_2 = inferring_ollama(
         messages=[{"role": "user", "content": prompt_2}],
-        options= {
-            "seed": 12345,
-            "temperature": temperature,
-            "keep_alive": "5m", 
-            "num_ctx": 8192 # Suffisant pour un morceau
-        }
-    )
+        model=model_name,
+        temperature = temperature,
+        stream = False,
+        context_size = 8192,
+        seed = 12345,
+        )
     
     return payload_2["message"]["content"]
 
@@ -121,19 +136,19 @@ Tu DOIS impérativement formater ta réponse selon la structure Markdown suivant
 {format_cr}
 
 """
+    #on pourrait mettre les prompts dans un json ?
 
     final_prompt = f"{system_prompt}\n\nVoici les notes extraites chronologiquement de la réunion :\n\n{combined_text}"
 
-
-    response = ollama.chat(
-        model=model_name,
+    response = inferring_ollama(
         messages=[{"role": "user", "content": final_prompt}],
-        options={
-            "seed": 1234,
-            "temperature": temperature,
-            "num_ctx": num_ctx,
-        }
-    )
+        model=model_name,
+        temperature = temperature,
+        stream = False,
+        context_size = 8192,
+        seed = 12345,
+        )
+    
     return response["message"]["content"]
 
 
@@ -185,13 +200,12 @@ def creation_template_from_file(bf, selected_model):
     
     # Si ta fonction inferring_ollama fait du stream par défaut, on peut tout récupérer dans une variable
     #generateur = inferring_ollama(messages=messages, model=selected_model, stream=True)
-    response = ollama.chat(
+
+    response = inferring_ollama(
+        messages=message,
         model=selected_model,
-        messages=message, 
-        options={
-            "seed": 12345,
-        }
-    )
+        seed = 12345,
+        )
     return response["message"]["content"]
     
     #template_genere = ""
