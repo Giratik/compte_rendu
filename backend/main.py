@@ -87,7 +87,8 @@ async def transcribe_audio(file: UploadFile = File(...), model_choice: str = For
         asr_options = {"beam_size": 5, "condition_on_previous_text": False, "compression_ratio_threshold": 2.4}
 
         # Transcription
-        model = whisperx.load_model(model_choice, device, compute_type=compute_type, asr_options=asr_options)
+        model_name = "large-v3" if model_choice == "large-v3" else model_choice
+        model = whisperx.load_model(model_name, device, compute_type=compute_type, asr_options=asr_options)
         audio = whisperx.load_audio(audio_path_to_process)
         result = model.transcribe(audio, batch_size=batch_size, language="fr")
         

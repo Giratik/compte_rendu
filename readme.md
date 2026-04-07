@@ -1,0 +1,2 @@
+Lors de la toute première utilisation de la trandcription audio, l'application a renvoyé l'erreur 134 lorsque je lui ai donné un fichier média de 70MB.
+Aucun problème avec un petit fichier de 5MB. Ensuite je n'ai plus eu de problème avec les gros fichiers

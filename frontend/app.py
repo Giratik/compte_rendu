@@ -12,6 +12,7 @@ import os
 # Récupère l'URL définie dans docker-compose, sinon utilise localhost en local
 API_URL = os.getenv("API_URL", "http://localhost:8001")
 
+
 # Initialisation des variables de session
 for key in ["transcript_text", "format_instructions_fichier", "final_summary", "combined_notes"]:
     if key not in st.session_state:
@@ -23,6 +24,57 @@ selected_temp = 0.15
 light_model = "mistral-nemo"
 heavy_model = "mistral-small:22b"
 chosen_model = heavy_model
+
+
+OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://10.75.12.5:11434" )
+
+def get_loaded_models():
+    """Récupère les modèles actuellement en mémoire."""
+    try:
+        response = requests.get(f"{OLLAMA_URL}/api/ps", timeout=5)
+        response.raise_for_status()
+        return response.json().get("models", [])
+    except Exception as e:
+        st.error(f"Erreur : {e}")
+        return []
+
+def unload_model(model_name):
+    """Force le déchargement d'un modèle."""
+    try:
+        requests.post(
+            f"{OLLAMA_URL}/api/generate",
+            json={"model": model_name, "keep_alive": 0, "prompt": ""},
+            timeout=10
+        )
+        return True
+    except Exception as e:
+        st.error(f"Erreur : {e}")
+        return False
+
+# --- UI ---
+with st.sidebar:
+    st.subheader("🧠 Modèles Ollama en mémoire")
+    st.text("Ce bouton n'est as destiné à rester. Si un modèle se trouve en mémoire, vous ne pourrez pas utiliser le modèle de transcription, donc veillez à cliquer sur le bouton pour vider le modèle en mémoire et recharger la page pour valider sa disparition")
+    loaded = get_loaded_models()
+
+    if not loaded:
+        st.info("Aucun modèle en mémoire.")
+    else:
+        for m in loaded:
+            col1, col2 = st.columns([2, 1])
+            col1.write(m["name"])
+            col2.write(f"{round(m.get('size', 0) / 1e9, 2)} Go")
+        if st.button("🗑️ Libérer", key=m["name"]):
+            if unload_model(m["name"]):
+                st.success(f"`{m['name']}` déchargé !")
+                st.rerun()
+
+
+
+
+
+
+
 
 @st.cache_data(ttl=60)
 def charger_templates_api():
@@ -105,7 +157,7 @@ if st.session_state.transcript_text:
     st.write("### Génération Compte-rendu")
     #st.subheader("📝 Résultat de la transcription")
     
-    #transcript_editor = st.text_area("Texte à analyser", value=st.session_state.transcript_text, height=250)
+    transcript_editor = st.text_area("Texte à analyser", value=st.session_state.transcript_text, height=250)
     transcript_editor = st.session_state.transcript_text
 
     mots = transcript_editor.split()
@@ -313,12 +365,14 @@ Tu es un assistant de direction spécialisé dans la synthèse d'informations. �
                 # Demande du DOCX au backend
                 payload_docx = {"markdown_text": st.session_state.final_summary}
                 res_docx = requests.post(f"{API_URL}/generate_docx/", json=payload_docx)
-                
+                ftype = "Résumé de la réunion"
+                if "Un compte-rendu de la réunion" in selection_option :
+                    ftype = "Compte-rendu de la réunion"
                 if res_docx.status_code == 200:
                     st.download_button(
                         label="📄 Télécharger en Word (.docx)",
                         data=res_docx.content, # Les bytes bruts du fichier Word
-                        file_name="Compte_Rendu.docx",
+                        file_name=f"{ftype}.docx",
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     )
                 else:

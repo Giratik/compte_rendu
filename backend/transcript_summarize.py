@@ -17,17 +17,7 @@ Sois exhaustif, concis et utilise des listes à puces. Ne fais aucune introducti
 Extrait à analyser :
 {chunk}"""
 
-    #premier_jet = ollama.chat(
-    #    model=model_name,
-    #    messages=[{"role": "user", "content": prompt_1}],
-    #    options= {
-    #        "seed": 12345,
-    #        "temperature": temperature,
-    #        "keep_alive": "5m", 
-    #        "num_ctx": 8192 # Suffisant pour un morceau
-    #    }
-    #)
-    
+
     premier_jet = inferring_ollama(
         messages=[{"role": "user", "content": prompt_1}],
         model=model_name,
@@ -52,16 +42,6 @@ Ta mission : Ce brouillon a oublié des détails techniques, des arguments ou de
 Identifie ce qui manque, et réécris une NOUVELLE liste à puces fusionnée, ENRICHIE et 100% EXHAUSTIVE. 
 Ne fais aucune introduction, donne uniquement la liste finale améliorée."""
 
-    #payload_2 = ollama.chat(
-    #    model=model_name,
-    #    messages=[{"role": "user", "content": prompt_2}],
-    #    options= {
-    #        "seed": 12345,
-    #        "temperature": temperature,
-    #        "keep_alive": "5m", 
-    #        "num_ctx": 8192 # Suffisant pour un morceau
-    #    }
-    #)
     payload_2 = inferring_ollama(
         messages=[{"role": "user", "content": prompt_2}],
         model=model_name,
@@ -147,6 +127,7 @@ Tu DOIS impérativement formater ta réponse selon la structure Markdown suivant
         stream = False,
         context_size = 8192,
         seed = 12345,
+        keep_alive = 0,
         )
     
     return response["message"]["content"]

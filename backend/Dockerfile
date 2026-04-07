@@ -28,14 +28,19 @@ RUN pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu
 # Installation des dépendances
 COPY requirements_backend.txt .
 RUN pip install --no-cache-dir -r requirements_backend.txt
-RUN pip install pyannote.audio
+RUN pip install faster-whisper
 RUN pip install git+https://github.com/m-bain/whisperX.git
+
+RUN python3 -c "\
+from huggingface_hub import snapshot_download; \
+snapshot_download('Systran/faster-whisper-large-v3'); \
+print('OK')"
 
 # Copie du code source
 COPY . .
 
 # Expose le port de FastAPI
-EXPOSE 8000
+EXPOSE 8001
 
-# Lancement de l'API sur le port 8001 (1 seul worker pour éviter de saturer la VRAM)
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "1"]
+# Lancement de l'API sur le port 8001
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "2"]
