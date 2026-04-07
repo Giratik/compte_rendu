@@ -125,7 +125,7 @@ Tu DOIS impérativement formater ta réponse selon la structure Markdown suivant
         model=model_name,
         temperature = temperature,
         stream = False,
-        context_size = 8192,
+        context_size = num_ctx,
         seed = 12345,
         keep_alive = 0,
         )

@@ -11,12 +11,15 @@ import whisperx
 import io
 import json
 import traceback
+import httpx
+
+OLLAMA_URL = os.environ.get("OLLAMA_HOST", "http://localhost:11434" )
 
 # Import de tes fonctions locales existantes
 from transcript_summarize import summarize_chunk, synthesize_summaries, creation_template_from_file
 from conversion_output import generer_docx
 from email_utils import envoyer_email_notification
-#from backend.ollama_client import inferring_ollama
+#from ollama_client import inferring_ollama
 
 app = FastAPI(title="API Transcription & Résumé")
 
@@ -53,7 +56,27 @@ async def get_templates():
     except FileNotFoundError:
         # C'est la bonne façon de remonter une erreur 404 à Streamlit
         raise HTTPException(status_code=404, detail="Fichier introuvable")
+    
 
+@app.get("/models/loaded")
+async def get_loaded_models():
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"{OLLAMA_URL}/api/ps", timeout=5)
+        response.raise_for_status()
+        return response.json().get("models", [])
+
+
+@app.post("/models/unload")
+async def unload_model(model_name: str):
+    """Force le déchargement d'un modèle."""
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{OLLAMA_URL}/api/generate",
+            json={"model": model_name, "keep_alive": 0},
+            timeout=5
+        )
+        response.raise_for_status()
+        return {"message": f"Modèle {model_name} déchargé."}
 
 
 # --- 1. ENDPOINT DE TRANSCRIPTION ---

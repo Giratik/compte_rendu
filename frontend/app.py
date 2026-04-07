@@ -10,7 +10,8 @@ st.title("Transcription & Compte Rendu de réunion")
 
 import os
 # Récupère l'URL définie dans docker-compose, sinon utilise localhost en local
-API_URL = os.getenv("API_URL", "http://localhost:8001")
+API_URL = os.environ.get("API_URL", "http://localhost:8001")
+DEFAULT_LLM_MODEL = os.environ.get("OLLAMA_DEFAULT_MODEL", "mistral-nemo")
 
 
 # Initialisation des variables de session
@@ -21,65 +22,41 @@ for key in ["transcript_text", "format_instructions_fichier", "final_summary", "
 model_choice = "large-v3"
 context_options = 16384
 selected_temp = 0.15
-light_model = "mistral-nemo"
-heavy_model = "mistral-small:22b"
-chosen_model = heavy_model
 
-
-OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://10.75.12.5:11434" )
-
-def get_loaded_models():
-    """Récupère les modèles actuellement en mémoire."""
-    try:
-        response = requests.get(f"{OLLAMA_URL}/api/ps", timeout=5)
-        response.raise_for_status()
-        return response.json().get("models", [])
-    except Exception as e:
-        st.error(f"Erreur : {e}")
-        return []
-
-def unload_model(model_name):
-    """Force le déchargement d'un modèle."""
-    try:
-        requests.post(
-            f"{OLLAMA_URL}/api/generate",
-            json={"model": model_name, "keep_alive": 0, "prompt": ""},
-            timeout=10
-        )
-        return True
-    except Exception as e:
-        st.error(f"Erreur : {e}")
-        return False
 
 # --- UI ---
 with st.sidebar:
     st.subheader("🧠 Modèles Ollama en mémoire")
-    st.text("Ce bouton n'est as destiné à rester. Si un modèle se trouve en mémoire, vous ne pourrez pas utiliser le modèle de transcription, donc veillez à cliquer sur le bouton pour vider le modèle en mémoire et recharger la page pour valider sa disparition")
-    loaded = get_loaded_models()
+    st.text("Ce bouton n'est pas destiné à rester. Si un modèle se trouve en mémoire, vous ne pourrez pas utiliser le modèle de transcription, donc veillez à cliquer sur le bouton pour vider le modèle en mémoire et recharger la page pour valider sa disparition")
+    try:
+        loaded = requests.get(f"{API_URL}/models/loaded")
+        loaded.raise_for_status()
+    except Exception as e:
+                st.error(f"Erreur de communication avec le serveur : {e}. Les modèles n'ont pas été récupérés")
+    #loaded = get_loaded_models()
 
     if not loaded:
         st.info("Aucun modèle en mémoire.")
     else:
-        for m in loaded:
+        for m in loaded.json():
             col1, col2 = st.columns([2, 1])
             col1.write(m["name"])
             col2.write(f"{round(m.get('size', 0) / 1e9, 2)} Go")
-        if st.button("🗑️ Libérer", key=m["name"]):
-            if unload_model(m["name"]):
-                st.success(f"`{m['name']}` déchargé !")
+            if st.button("🗑️ Libérer", key=m["name"]):
+                try:
+                    response = requests.post(f"{API_URL}/models/unload?model_name={m['name']}")
+                    response.raise_for_status()
+                except Exception as e:
+                    st.error(f"Erreur : {e}")
                 st.rerun()
-
-
-
-
 
 
 
 
 @st.cache_data(ttl=60)
 def charger_templates_api():
-    api_url = os.environ.get("API_URL", "http://backend:8001")
-    url = f"{api_url}/ressources/files"
+    #api_url = os.environ.get("API_URL", "http://backend:8001")
+    url = f"{API_URL}/ressources/files"
     
     try:
         reponse = requests.get(url, timeout=10)
@@ -176,17 +153,6 @@ if st.session_state.transcript_text:
             
         nb_chunks = len(chunks)
 
-        #st.markdown("---")
-        #st.subheader("Quel type de modèle d'IA utiliser ?")
-       # user_choice = st.pills("Types disponibles (léger par défaut):",
-       #                         ["modèle léger = > rapide mais compte-rendu moins exhaustif", "modèle lourd = > Lent mais compte-rendu très exhaustif"])
-       # if user_choice == "modèle lourd = > Lent mais compte-rendu très exhaustif":
-       #     chosen_model = heavy_model
-       # else:
-       #     chosen_model = light_model
-        chosen_model = heavy_model
-        #st.subheader("Paramètres de la génération")
-
         selection_option = st.radio("Choisissez ce que l'IA doit générer :",
                                     ["Un résumé de la réunion", "Un compte-rendu de la réunion"],
                                     )
@@ -251,46 +217,6 @@ Heure de début : {...}
             format_instructions ="""
 Tu es un assistant de direction spécialisé dans la synthèse d'informations. À partir de la transcription ou des notes fournies, rédige un résumé rapide et percutant (Executive Summary). Ignore les petites digressions ou les détails opérationnels mineurs. Respecte strictement la structure suivante :\n\n# L'Essentiel (TL;DR)\n(Résume le contexte, l'objectif et l'issue principale de la réunion en un seul paragraphe de 3 à 4 phrases maximum.)\n\n# Les Points Clés à Retenir\n(Mets en évidence les informations majeures, les grandes annonces ou les points de blocage importants. Utilise des puces pour faciliter la lecture rapide.)\n* ...\n* ...\n\n# Actions Critiques\n(Liste uniquement les prochaines étapes majeures qui découlent directement de cette réunion. Ne mets pas les micro-tâches.)\n* [Action] - [Responsable] - [Échéance]
 """
-
-            #formatype = st.radio("Source du format template", ["Manuel", "A partir d'un fichier"])
-            #
-            #if formatype == "Manuel":
-            #    if templates:
-            #        # Création d'un dictionnaire pour faciliter la sélection
-            #        # Clé : Nom du template | Valeur : Les données du template (description, prompt...)
-            #        options_templates = {t['nom']: t for t in templates}
-#
-            #        choix_utilisateur = st.selectbox(
-            #            "Choisissez un type de réunion :", 
-            #            options=list(options_templates.keys())
-            #        )
-            #        
-            #        # Récupération des données du modèle choisi
-            #        template_actuel = options_templates[choix_utilisateur]
-            #        
-            #        # Affichage d'une petite bulle d'info avec la description
-            #        #st.info(template_actuel['description'])
-            #    format_instructions = st.text_area("Voici le format du compte-rendu", value=template_actuel['prompt'], height=150)
-#
-            ##possibilité de charger le template dans un fichier json
-            ##ça permet d'avoir plus de templates à disposition
-            #elif formatype == "A partir d'un fichier":
-            #    bf = st.file_uploader("Charger votre fichier")
-            #    if bf and st.button("Convertir le fichier"):
-            #        with st.spinner("Extraction du format via l'API..."):
-            #            files = {"file": (bf.name, bf.getvalue(), bf.type)}
-            #            data = {"chosen_model": chosen_model}
-            #            res = requests.post(f"{API_URL}/create_template/", files=files, data=data)
-            #            if res.status_code == 200:
-            #                st.session_state.format_instructions_fichier = res.json()["template"]
-            #                st.success("Fichier correctement converti en template.")
-            #            else:
-            #                st.error("Erreur lors de la conversion.")
-#
-            #    if st.session_state.format_instructions_fichier:
-            #        format_instructions = st.session_state.format_instructions_fichier
-            #        with st.expander("Voir le format extrait"):
-            #            st.text(format_instructions)
 #
         # --- ACTION DE GÉNÉRATION ---
         if st.button("Lancer la génération"):
@@ -309,7 +235,7 @@ Tu es un assistant de direction spécialisé dans la synthèse d'informations. �
                         "chunk_index": num_etape,
                         "total_chunks": nb_chunks,
                         "temperature": selected_temp,
-                        "model_name": chosen_model,
+                        "model_name": DEFAULT_LLM_MODEL,
                         "passes": 2
                     }
                     
@@ -330,7 +256,7 @@ Tu es un assistant de direction spécialisé dans la synthèse d'informations. �
                     "prompt_cr": prompt_instructions,
                     "format_cr": format_instructions,
                     "temperature": selected_temp,
-                    "model_name": chosen_model,
+                    "model_name": DEFAULT_LLM_MODEL,
                     "num_ctx": context_options,
                     "email_destinataire": user_email
                 }

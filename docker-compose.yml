@@ -12,8 +12,9 @@ services:
 
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
-      # Permet à la librairie python "ollama" de trouver votre Ollama local
-      - OLLAMA_HOST=http://10.75.12.5:11434 
+      # Permet à la librairie python "ollama" de trouver le Ollama local
+      - OLLAMA_HOST=http://10.75.12.5:11434
+     
 
 
 
@@ -23,9 +24,10 @@ services:
       dockerfile: Dockerfile
     container_name: ia-frontend
     ports:
-      - "8502:8501" # 8502 en externe pour ne pas bloquer votre App #1
+      - "8502:8501" 
     environment:
       - API_URL=http://backend:8001
+      - OLLAMA_DEFAULT_MODEL=mistral-small:22b
       - STREAMLIT_SERVER_MAX_UPLOAD_SIZE=5000
       - STREAMLIT_BROWSER_SERVER_ADDRESS=10.75.12.5
       - STREAMLIT_BROWSER_SERVER_PORT=8502
