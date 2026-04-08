@@ -31,11 +31,6 @@ RUN pip install --no-cache-dir -r requirements_backend.txt
 RUN pip install faster-whisper
 RUN pip install git+https://github.com/m-bain/whisperX.git
 
-RUN python3 -c "\
-from huggingface_hub import snapshot_download; \
-snapshot_download('Systran/faster-whisper-large-v3'); \
-print('OK')"
-
 # Copie du code source
 COPY . .
 

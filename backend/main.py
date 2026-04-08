@@ -30,6 +30,7 @@ class ChunkRequest(BaseModel):
     total_chunks: int
     temperature: float
     model_name: str
+    num_ctx: int
     passes: int
 
 class SynthesizeRequest(BaseModel):
@@ -150,8 +151,13 @@ async def transcribe_audio(file: UploadFile = File(...), model_choice: str = For
 async def api_summarize_chunk(req: ChunkRequest):
     try:
         resume = summarize_chunk(
-            req.chunk, req.chunk_index, req.total_chunks, 
-            req.temperature, req.model_name, passes=req.passes
+            chunk=req.chunk,
+            chunk_index=req.chunk_index,
+            total_chunks=req.total_chunks,
+            temperature=req.temperature,
+            model_name=req.model_name,
+            num_ctx=req.num_ctx,
+            passes=req.passes
         )
         return {"summary": resume}
     except Exception as e:
@@ -162,11 +168,18 @@ async def api_summarize_chunk(req: ChunkRequest):
 
 @app.post("/synthesize/")
 async def api_synthesize(req: SynthesizeRequest):
+    print("before try")
     try:
+        print("entered try")
         final_summary = synthesize_summaries(
-            req.combined_notes, prompt_cr=req.prompt_cr, format_cr=req.format_cr,
-            temperature=req.temperature, model_name=req.model_name, num_ctx=req.num_ctx
-        )
+        combined_text=req.combined_notes,
+        prompt_cr=req.prompt_cr,
+        format_cr=req.format_cr,
+        temperature=req.temperature,
+        model_name=req.model_name,
+        num_ctx=req.num_ctx,
+)
+        print("after function")
 
         if req.email_destinataire:
             envoyer_email_notification(

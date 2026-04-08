@@ -12,20 +12,21 @@ import os
 # Récupère l'URL définie dans docker-compose, sinon utilise localhost en local
 API_URL = os.environ.get("API_URL", "http://localhost:8001")
 DEFAULT_LLM_MODEL = os.environ.get("OLLAMA_DEFAULT_MODEL", "mistral-nemo")
-
+CHUNK_CONTEXT_SIZE = os.environ.get("CHUNK_CONTEXT_SIZE", 9999)
+FULL_SUMMARY_CONTEXT_SIZE = os.environ.get("FULL_SUMMARY_CONTEXT_SIZE", 12288)
+WHISPER_MODEL = os.environ.get("WHISPER_MODEL", "large-v3")
+TEMPERATURE = os.environ.get("TEMPERATURE", 0.15)
 
 # Initialisation des variables de session
 for key in ["transcript_text", "format_instructions_fichier", "final_summary", "combined_notes"]:
     if key not in st.session_state:
         st.session_state[key] = None if key != "transcript_text" else ""
 
-model_choice = "large-v3"
-context_options = 16384
-selected_temp = 0.15
 
 
 # --- UI ---
 with st.sidebar:
+    loaded = None
     st.subheader("🧠 Modèles Ollama en mémoire")
     st.text("Ce bouton n'est pas destiné à rester. Si un modèle se trouve en mémoire, vous ne pourrez pas utiliser le modèle de transcription, donc veillez à cliquer sur le bouton pour vider le modèle en mémoire et recharger la page pour valider sa disparition")
     try:
@@ -35,7 +36,7 @@ with st.sidebar:
                 st.error(f"Erreur de communication avec le serveur : {e}. Les modèles n'ont pas été récupérés")
     #loaded = get_loaded_models()
 
-    if not loaded:
+    if loaded != None:
         st.info("Aucun modèle en mémoire.")
     else:
         for m in loaded.json():
@@ -55,7 +56,6 @@ with st.sidebar:
 
 @st.cache_data(ttl=60)
 def charger_templates_api():
-    #api_url = os.environ.get("API_URL", "http://backend:8001")
     url = f"{API_URL}/ressources/files"
     
     try:
@@ -106,7 +106,7 @@ if input_mode == "Transcrire un fichier Audio/Vidéo":
             
             # Préparation du fichier pour l'envoi via l'API
             files = {"file": (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
-            data = {"model_choice": model_choice, "email_destinataire": user_email}
+            data = {"model_choice": WHISPER_MODEL, "email_destinataire": user_email}
             
             try:
                 response = requests.post(f"{API_URL}/transcribe/", files=files, data=data)
@@ -234,8 +234,9 @@ Tu es un assistant de direction spécialisé dans la synthèse d'informations. �
                         "chunk": chunk,
                         "chunk_index": num_etape,
                         "total_chunks": nb_chunks,
-                        "temperature": selected_temp,
+                        "temperature": TEMPERATURE,
                         "model_name": DEFAULT_LLM_MODEL,
+                        "num_ctx": CHUNK_CONTEXT_SIZE,
                         "passes": 2
                     }
                     
@@ -255,9 +256,9 @@ Tu es un assistant de direction spécialisé dans la synthèse d'informations. �
                     "combined_notes": combined_notes_temp,
                     "prompt_cr": prompt_instructions,
                     "format_cr": format_instructions,
-                    "temperature": selected_temp,
+                    "temperature": TEMPERATURE,
                     "model_name": DEFAULT_LLM_MODEL,
-                    "num_ctx": context_options,
+                    "num_ctx": FULL_SUMMARY_CONTEXT_SIZE,
                     "email_destinataire": user_email
                 }
                 

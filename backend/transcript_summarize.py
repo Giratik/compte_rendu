@@ -1,9 +1,53 @@
 import PyPDF2
 import docx
-import ollama
+import signal
+from contextlib import contextmanager
 from ollama_client import inferring_ollama
 
-def summarize_chunk(chunk, chunk_index, total_chunks, temperature=0.1, model_name="mistral-nemo", passes=1):
+import time
+
+
+
+class OllamaTimeout(Exception):
+    pass
+
+@contextmanager
+def timeout(seconds):
+    def handler(signum, frame):
+        raise OllamaTimeout(f"Ollama n'a pas répondu en {seconds}s")
+    signal.signal(signal.SIGALRM, handler)
+    signal.alarm(seconds)
+    try:
+        yield
+    finally:
+        signal.alarm(0)
+
+def safe_inferring(messages, model, timeout_s=120, **kwargs):
+    try:
+        with timeout(timeout_s):
+            return inferring_ollama(messages=messages, model=model, **kwargs)
+    except OllamaTimeout as e:
+        print(f"⚠️ {e}")
+        # Optionnel : forcer le déchargement du modèle
+        try:
+            inferring_ollama(messages=messages, model=model, keep_alive=0, **kwargs)
+        except:
+            pass
+        raise
+
+def safe_inferring_with_retry(messages, model, retries=2, timeout_s=120, **kwargs):
+    for attempt in range(retries + 1):
+        try:
+            return safe_inferring(messages, model, timeout_s, **kwargs)
+        except OllamaTimeout:
+            if attempt < retries:
+                print(f"Retry {attempt + 1}/{retries}...")
+                time.sleep(5)
+            else:
+                raise
+
+
+def summarize_chunk(chunk, chunk_index, total_chunks, temperature=0.1, model_name="mistral-nemo", num_ctx = 8888, passes=1):
     """Étape 1 (Map) : Extraction des faits avec option de double vérification."""
     
     # --- PASSAGE 1 : EXTRACTION INITIALE ---
@@ -18,12 +62,13 @@ Extrait à analyser :
 {chunk}"""
 
 
-    premier_jet = inferring_ollama(
+    premier_jet = safe_inferring(
         messages=[{"role": "user", "content": prompt_1}],
         model=model_name,
         temperature = temperature,
         stream = False,
-        context_size = 8192,
+        context_size = num_ctx,
+        timeout_s=120,
         )
     
     # Si on a demandé un seul passage, on s'arrête là
@@ -42,18 +87,29 @@ Ta mission : Ce brouillon a oublié des détails techniques, des arguments ou de
 Identifie ce qui manque, et réécris une NOUVELLE liste à puces fusionnée, ENRICHIE et 100% EXHAUSTIVE. 
 Ne fais aucune introduction, donne uniquement la liste finale améliorée."""
 
-    payload_2 = inferring_ollama(
+    payload_2 = safe_inferring(
         messages=[{"role": "user", "content": prompt_2}],
         model=model_name,
         temperature = temperature,
         stream = False,
-        context_size = 8192,
+        context_size = num_ctx,
         seed = 12345,
+        timeout_s=120,
         )
     
     return payload_2["message"]["content"]
 
+
+# ----------------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------------
+
 def synthesize_summaries(combined_text, prompt_cr, format_cr, temperature=0.15, model_name="mistral-nemo", num_ctx=16384):
+    print("inside start")
     """Étape 2 (Reduce) : Applique le Super-Prompt sur tous les faits extraits."""
 
     if prompt_cr == None :
@@ -120,6 +176,7 @@ Tu DOIS impérativement formater ta réponse selon la structure Markdown suivant
 
     final_prompt = f"{system_prompt}\n\nVoici les notes extraites chronologiquement de la réunion :\n\n{combined_text}"
 
+    print("before inferring")
     response = inferring_ollama(
         messages=[{"role": "user", "content": final_prompt}],
         model=model_name,
@@ -128,8 +185,12 @@ Tu DOIS impérativement formater ta réponse selon la structure Markdown suivant
         context_size = num_ctx,
         seed = 12345,
         keep_alive = 0,
+        timeout=400,
         )
     
+
+    
+    print("after inferring")
     return response["message"]["content"]
 
 
@@ -186,6 +247,8 @@ def creation_template_from_file(bf, selected_model):
         messages=message,
         model=selected_model,
         seed = 12345,
+        stream = False,
+        timeout_s=120,
         )
     return response["message"]["content"]
     
