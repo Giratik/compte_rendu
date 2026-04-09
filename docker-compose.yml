@@ -19,7 +19,7 @@ services:
       - HF_HOME=/root/.cache/huggingface
       # Permet à la librairie python "ollama" de trouver le Ollama local
       - OLLAMA_HOST=http://10.75.12.5:11434
-     
+      - DEBUG_LOG_TOGGLE=OFF
 
 
 

@@ -10,7 +10,7 @@ client = Client(
     host=URL_OLLAMA,
     timeout=httpx.Timeout(
         connect=5.0,    # Connexion au serveur
-        read=300.0,     # Attente de la réponse (le plus important)
+        read=600.0,     # Attente de la réponse (le plus important)
         write=10.0,     # Envoi du prompt
         pool=5.0        # Attente d'une connexion disponible
     )
@@ -18,7 +18,7 @@ client = Client(
 
     
 def inferring_ollama(messages, model, temperature=0.4, stream=False,
-                     context_size=12000, seed=None, keep_alive=-1):
+                     context_size=12000, seed=None, keep_alive=-1, **kwargs):
     start = time.time()
     try:
         response = client.chat(

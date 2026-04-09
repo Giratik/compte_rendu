@@ -18,9 +18,13 @@ WHISPER_MODEL = os.environ.get("WHISPER_MODEL", "large-v3")
 TEMPERATURE = os.environ.get("TEMPERATURE", 0.15)
 
 # Initialisation des variables de session
-for key in ["transcript_text", "format_instructions_fichier", "final_summary", "combined_notes"]:
+for key in ["transcript_text", "format_instructions_fichier", "final_summary", "combined_notes", "is_transcribing"]:
     if key not in st.session_state:
-        st.session_state[key] = None if key != "transcript_text" else ""
+        # On initialise is_transcribing à False par défaut
+        if key == "is_transcribing":
+            st.session_state[key] = False
+        else:
+            st.session_state[key] = None if key != "transcript_text" else ""
 
 
 
@@ -100,11 +104,20 @@ if input_mode == "Transcrire un fichier Audio/Vidéo":
         type=["wav", "mp3", "m4a", "flac", "mp4", "avi", "mov", "mkv"],
     )
 
-    if st.button("Lancer la transcription") and uploaded_file is not None:
-        with st.spinner("Envoi au serveur et transcription en cours... (Ceci peut prendre du temps)"):
+    # Sécurité : Le bouton est grisé si pas de fichier OU si déjà en cours
+    bouton_disabled = (uploaded_file is None) or st.session_state.is_transcribing
+    # On change dynamiquement le texte du bouton pour informer l'utilisateur
+    label_bouton = "⌛ Transcription en cours..." if st.session_state.is_transcribing else "Lancer la transcription"
+
+    if st.button(label_bouton, disabled=bouton_disabled):
+        st.session_state.is_transcribing = True
+        st.rerun() # Force la mise à jour de l'UI pour griser le bouton
+
+# Ce bloc ne s'exécute que si l'état est "en cours"
+    if st.session_state.is_transcribing and uploaded_file is not None:
+        with st.spinner("Envoi au serveur et transcription en cours..."):
             start_time = time.time()
             
-            # Préparation du fichier pour l'envoi via l'API
             files = {"file": (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
             data = {"model_choice": WHISPER_MODEL, "email_destinataire": user_email}
             
@@ -115,10 +128,14 @@ if input_mode == "Transcrire un fichier Audio/Vidéo":
                 st.session_state.transcript_text = response.json()["transcript"]
                 
                 execution_time = time.time() - start_time
-                st.success(f"Transcription terminée en {int(execution_time // 60)} min et {int(execution_time % 60)} s !")
+                st.success(f"Transcription terminée en {int(execution_time // 60)} min !")
                 st.toast('🎙️ La transcription audio est terminée !', icon='✅')
             except Exception as e:
-                st.error(f"Erreur de communication avec le serveur : {e}")
+                st.error(f"Erreur de communication : {e}")
+            finally:
+                # IMPORTANT : On libère le bouton quoi qu'il arrive (succès ou erreur)
+                st.session_state.is_transcribing = False
+                st.rerun()
 
 elif input_mode == "Uploader un fichier Texte existant (.txt)":
     uploaded_text = st.file_uploader("Déposez votre fichier texte (.txt)", type=["txt"])
@@ -239,10 +256,11 @@ Tu es un assistant de direction spécialisé dans la synthèse d'informations. �
                         "num_ctx": CHUNK_CONTEXT_SIZE,
                         "passes": 2
                     }
-                    
+
                     res_chunk = requests.post(f"{API_URL}/summarize_chunk/", json=payload)
                     res_chunk.raise_for_status()
                     resume_partiel = res_chunk.json()["summary"]
+                    
 
                     partial_summaries.append(f"### Faits de la section {num_etape}\n{resume_partiel}")
                     progress_bar.progress(num_etape / (nb_chunks + 1)) 

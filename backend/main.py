@@ -14,6 +14,7 @@ import traceback
 import httpx
 
 OLLAMA_URL = os.environ.get("OLLAMA_HOST", "http://localhost:11434" )
+DEBUG_LOG_TOGGLE = os.environ.get("DEBUG_LOG_TOGGLE", "OFF")
 
 # Import de tes fonctions locales existantes
 from transcript_summarize import summarize_chunk, synthesize_summaries, creation_template_from_file
@@ -168,9 +169,11 @@ async def api_summarize_chunk(req: ChunkRequest):
 
 @app.post("/synthesize/")
 async def api_synthesize(req: SynthesizeRequest):
-    print("before try")
+    if DEBUG_LOG_TOGGLE == "ON":
+        print("before try")
     try:
-        print("entered try")
+        if DEBUG_LOG_TOGGLE == "ON":
+            print("entered try")
         final_summary = synthesize_summaries(
         combined_text=req.combined_notes,
         prompt_cr=req.prompt_cr,
@@ -179,7 +182,8 @@ async def api_synthesize(req: SynthesizeRequest):
         model_name=req.model_name,
         num_ctx=req.num_ctx,
 )
-        print("after function")
+        if DEBUG_LOG_TOGGLE == "ON":
+            print("after function")
 
         if req.email_destinataire:
             envoyer_email_notification(

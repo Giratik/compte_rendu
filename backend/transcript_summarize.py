@@ -1,50 +1,50 @@
 import PyPDF2
 import docx
-import signal
+import os
 from contextlib import contextmanager
 from ollama_client import inferring_ollama
 
 import time
 
+DEBUG_LOG_TOGGLE = os.environ.get("DEBUG_LOG_TOGGLE", "OFF")
 
-
-class OllamaTimeout(Exception):
-    pass
-
-@contextmanager
-def timeout(seconds):
-    def handler(signum, frame):
-        raise OllamaTimeout(f"Ollama n'a pas répondu en {seconds}s")
-    signal.signal(signal.SIGALRM, handler)
-    signal.alarm(seconds)
-    try:
-        yield
-    finally:
-        signal.alarm(0)
-
-def safe_inferring(messages, model, timeout_s=120, **kwargs):
-    try:
-        with timeout(timeout_s):
-            return inferring_ollama(messages=messages, model=model, **kwargs)
-    except OllamaTimeout as e:
-        print(f"⚠️ {e}")
-        # Optionnel : forcer le déchargement du modèle
-        try:
-            inferring_ollama(messages=messages, model=model, keep_alive=0, **kwargs)
-        except:
-            pass
-        raise
-
-def safe_inferring_with_retry(messages, model, retries=2, timeout_s=120, **kwargs):
-    for attempt in range(retries + 1):
-        try:
-            return safe_inferring(messages, model, timeout_s, **kwargs)
-        except OllamaTimeout:
-            if attempt < retries:
-                print(f"Retry {attempt + 1}/{retries}...")
-                time.sleep(5)
-            else:
-                raise
+#class OllamaTimeout(Exception):
+#    pass
+#
+#@contextmanager
+#def timeout(seconds):
+#    def handler(signum, frame):
+#        raise OllamaTimeout(f"Ollama n'a pas répondu en {seconds}s")
+#    signal.signal(signal.SIGALRM, handler)
+#    signal.alarm(seconds)
+#    try:
+#        yield
+#    finally:
+#        signal.alarm(0)
+#
+#def safe_inferring(messages, model, timeout_s=120, **kwargs):
+#    try:
+#        with timeout(timeout_s):
+#            return inferring_ollama(messages=messages, model=model, **kwargs)
+#    except OllamaTimeout as e:
+#        print(f"⚠️ {e}")
+#        # Optionnel : forcer le déchargement du modèle
+#        try:
+#            inferring_ollama(messages=messages, model=model, keep_alive=0, **kwargs)
+#        except:
+#            pass
+#        raise
+#
+#def safe_inferring_with_retry(messages, model, retries=2, timeout_s=120, **kwargs):
+#    for attempt in range(retries + 1):
+#        try:
+#            return safe_inferring(messages, model, timeout_s, **kwargs)
+#        except OllamaTimeout:
+#            if attempt < retries:
+#                print(f"Retry {attempt + 1}/{retries}...")
+#                time.sleep(5)
+#            else:
+#                raise
 
 
 def summarize_chunk(chunk, chunk_index, total_chunks, temperature=0.1, model_name="mistral-nemo", num_ctx = 8888, passes=1):
@@ -61,16 +61,18 @@ Sois exhaustif, concis et utilise des listes à puces. Ne fais aucune introducti
 Extrait à analyser :
 {chunk}"""
 
-
-    premier_jet = safe_inferring(
+    if DEBUG_LOG_TOGGLE == "ON":
+        print("premier passage")
+    premier_jet = inferring_ollama(
         messages=[{"role": "user", "content": prompt_1}],
         model=model_name,
         temperature = temperature,
         stream = False,
         context_size = num_ctx,
-        timeout_s=120,
+        #timeout_s=120,
         )
-    
+    if DEBUG_LOG_TOGGLE == "ON":
+        print("fin premier passage")
     # Si on a demandé un seul passage, on s'arrête là
     if passes == 1:
         return premier_jet["message"]["content"]
@@ -87,16 +89,19 @@ Ta mission : Ce brouillon a oublié des détails techniques, des arguments ou de
 Identifie ce qui manque, et réécris une NOUVELLE liste à puces fusionnée, ENRICHIE et 100% EXHAUSTIVE. 
 Ne fais aucune introduction, donne uniquement la liste finale améliorée."""
 
-    payload_2 = safe_inferring(
+    if DEBUG_LOG_TOGGLE == "ON":
+        print("deuxième passage")
+    payload_2 = inferring_ollama(
         messages=[{"role": "user", "content": prompt_2}],
         model=model_name,
         temperature = temperature,
         stream = False,
         context_size = num_ctx,
         seed = 12345,
-        timeout_s=120,
+        #timeout_s=120,
         )
-    
+    if DEBUG_LOG_TOGGLE == "ON":
+        print("fin deuxième passage")
     return payload_2["message"]["content"]
 
 
@@ -176,7 +181,8 @@ Tu DOIS impérativement formater ta réponse selon la structure Markdown suivant
 
     final_prompt = f"{system_prompt}\n\nVoici les notes extraites chronologiquement de la réunion :\n\n{combined_text}"
 
-    print("before inferring")
+    if DEBUG_LOG_TOGGLE == "ON":
+        print("before inferring")
     response = inferring_ollama(
         messages=[{"role": "user", "content": final_prompt}],
         model=model_name,
@@ -185,12 +191,10 @@ Tu DOIS impérativement formater ta réponse selon la structure Markdown suivant
         context_size = num_ctx,
         seed = 12345,
         keep_alive = 0,
-        timeout=400,
         )
     
-
-    
-    print("after inferring")
+    if DEBUG_LOG_TOGGLE == "ON":
+        print("after inferring")
     return response["message"]["content"]
 
 
@@ -248,7 +252,7 @@ def creation_template_from_file(bf, selected_model):
         model=selected_model,
         seed = 12345,
         stream = False,
-        timeout_s=120,
+        #timeout_s=120,
         )
     return response["message"]["content"]
     
