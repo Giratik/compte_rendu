@@ -1,0 +1,108 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "title": "🔥 Charge GPU (NVIDIA)",
+      "type": "gauge",
+      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "DCGM_FI_DEV_GPU_UTIL", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0, "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 70 },
+              { "color": "red", "value": 90 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "🧠 Mémoire VRAM Utilisée",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 6, "x": 6, "y": 0 },
+      "targets": [
+        { "expr": "DCGM_FI_DEV_FB_USED", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "decbytes" }
+      }
+    },
+    {
+      "title": "💻 Utilisation CPU VM",
+      "type": "gauge",
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 0 },
+      "targets": [
+        { "expr": "100 - (avg by (instance) (irate(node_cpu_seconds_total{mode='idle'}[5m])) * 100)", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "percent", "min": 0, "max": 100 }
+      }
+    },
+    {
+      "title": "⏱️ Temps moyen Transcription (/transcribe/)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        { 
+          "expr": "rate(http_request_duration_seconds_sum{handler='/transcribe/'}[5m]) / rate(http_request_duration_seconds_count{handler='/transcribe/'}[5m])", 
+          "legendFormat": "Temps de réponse (s)",
+          "refId": "A" 
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s" }
+      }
+    },
+    {
+      "title": "❌ Erreurs Serveur (5xx)",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 8 },
+      "targets": [
+        { "expr": "sum(rate(http_requests_total{status=~'5..'}[5m]))", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "fixed", "fixedColor": "red" } }
+      }
+    },
+    {
+    "title": "👥 Activité en direct",
+    "type": "stat",
+    "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 },
+    "targets": [
+        {
+        "expr": "sum(http_requests_inprogress)",
+        "legendFormat": "Actions en cours",
+        "refId": "A"
+        }
+    ],
+    "fieldConfig": {
+        "defaults": {
+        "color": { "mode": "palette-classic" },
+        "mappings": [
+            { "options": { "0": { "text": "Repos" } }, "type": "value" }
+        ]
+        }
+    }
+    }
+  ],
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["FastAPI", "GPU", "Stress-Test"],
+  "templating": { "list": [] },
+  "time": { "from": "now-30m", "to": "now" },
+  "title": "IA App Monitoring - Stress Test",
+  "version": 1
+    
+}

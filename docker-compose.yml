@@ -1,4 +1,4 @@
-version: '3.8'
+#docker-compose.yml
 
 services:
   backend:
@@ -10,8 +10,8 @@ services:
       - /home/paulvidouze/.cache/huggingface:/root/.cache/huggingface
       - /home/paulvidouze/.cache/torch:/root/.cache/torch
     ports:
-      - "8001:8000" # Aligné avec uvicorn
-    runtime: nvidia          
+      - "8001:8001" # Aligné avec uvicorn
+    runtime: nvidia    
 
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
@@ -20,8 +20,6 @@ services:
       # Permet à la librairie python "ollama" de trouver le Ollama local
       - OLLAMA_HOST=http://10.75.12.5:11434
       - DEBUG_LOG_TOGGLE=OFF
-
-
 
   frontend:
     build: 
@@ -34,10 +32,12 @@ services:
       - API_URL=http://backend:8001
 
       - OLLAMA_DEFAULT_MODEL=mistral-small:22b
+      - TAILLE_MORCEAU=2000
       - CHUNK_CONTEXT_SIZE=12288
       - FULL_SUMMARY_CONTEXT_SIZE=12288
       - WHISPER_MODEL=large-v3
       - TEMPERATURE=0.15
+      - NB_CHUNKS=3
 
       - STREAMLIT_SERVER_MAX_UPLOAD_SIZE=5000
       - STREAMLIT_BROWSER_SERVER_ADDRESS=10.75.12.5
