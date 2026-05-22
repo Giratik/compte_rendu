@@ -20,6 +20,7 @@ DEBUG_LOG_TOGGLE = os.environ.get("DEBUG_LOG_TOGGLE", "OFF")
 from transcript_summarize import summarize_chunk, synthesize_summaries, creation_template_from_file
 from conversion_output import generer_docx
 from email_utils import envoyer_email_notification
+from whisperx_transcriber import transcribe_audio_with_whisperx, convert_audio_to_wav
 #from ollama_client import inferring_ollama
 
 app = FastAPI(title="API Transcription & Résumé")
@@ -86,50 +87,24 @@ async def unload_model(model_name: str):
 async def transcribe_audio(file: UploadFile = File(...), model_choice: str = Form("large-v3"), email_destinataire: str = Form(None)):
     file_extension = os.path.splitext(file.filename)[1].lower()
 
-    
     with tempfile.NamedTemporaryFile(delete=False, suffix=file_extension) as tmp_file:
         tmp_file.write(await file.read())
         tmp_input_path = tmp_file.name
 
-    audio_path_to_process = tmp_input_path
+    audio_path_to_process = None
 
     try:
-        # Nettoyage FFmpeg
-        tmp_audio_file = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
-        audio_path_to_process = tmp_audio_file.name
-        tmp_audio_file.close() 
+        # Convert audio to WAV format
+        audio_path_to_process = convert_audio_to_wav(tmp_input_path)
 
-        command = [
-            "ffmpeg", "-i", tmp_input_path, "-vn",
-            "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", "-y",
-            audio_path_to_process
-        ]
-        subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-        device = "cuda" 
-        batch_size = 16 
-        compute_type = "float16" 
-        asr_options = {"beam_size": 5, "condition_on_previous_text": False, "compression_ratio_threshold": 2.4}
-
-        # Transcription
-        model_name = "large-v3" if model_choice == "large-v3" else model_choice
-        model = whisperx.load_model(model_name, device, compute_type=compute_type, asr_options=asr_options)
-        audio = whisperx.load_audio(audio_path_to_process)
-        result = model.transcribe(audio, batch_size=batch_size, language="fr")
-        
-        del model
-        gc.collect()
-        if torch.cuda.is_available(): torch.cuda.empty_cache()
-
-        # Alignement
-        model_a, metadata = whisperx.load_align_model(language_code=result["language"], device=device)
-        result = whisperx.align(result["segments"], model_a, metadata, audio, device, return_char_alignments=False)
-
-        del model_a
-        gc.collect()
-        if torch.cuda.is_available(): torch.cuda.empty_cache()
-
-        full_text = " ".join([segment.get("text", "").strip() for segment in result["segments"]])
+        # Transcribe with WhisperX
+        full_text = await transcribe_audio_with_whisperx(
+            audio_path=audio_path_to_process,
+            model_choice=model_choice,
+            device="cuda",
+            batch_size=16,
+            compute_type="float16"
+        )
 
         if email_destinataire:
             envoyer_email_notification(
@@ -144,8 +119,10 @@ async def transcribe_audio(file: UploadFile = File(...), model_choice: str = For
         traceback.print_exc()  # Force l'affichage de l'erreur dans les logs Docker
         raise HTTPException(status_code=500, detail=str(e))
     finally:
-        if os.path.exists(tmp_input_path): os.remove(tmp_input_path)
-        if audio_path_to_process != tmp_input_path and os.path.exists(audio_path_to_process): os.remove(audio_path_to_process)
+        if os.path.exists(tmp_input_path):
+            os.remove(tmp_input_path)
+        if audio_path_to_process and os.path.exists(audio_path_to_process):
+            os.remove(audio_path_to_process)
 
 # --- 2. ENDPOINTS OLLAMA ---
 @app.post("/summarize_chunk/")

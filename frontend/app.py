@@ -11,7 +11,7 @@ st.title("Transcription & Compte Rendu de réunion")
 import os
 # Récupère l'URL définie dans docker-compose, sinon utilise localhost en local
 API_URL = os.environ.get("API_URL", "http://localhost:8001")
-DEFAULT_LLM_MODEL = os.environ.get("OLLAMA_DEFAULT_MODEL", "mistral-nemo")
+DEFAULT_LLM_MODEL = os.environ.get("OLLAMA_DEFAULT_MODEL", "gemma4:e4b")
 CHUNK_CONTEXT_SIZE = os.environ.get("CHUNK_CONTEXT_SIZE", 9999)
 FULL_SUMMARY_CONTEXT_SIZE = os.environ.get("FULL_SUMMARY_CONTEXT_SIZE", 12288)
 WHISPER_MODEL = os.environ.get("WHISPER_MODEL", "large-v3")
