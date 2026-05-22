@@ -1,187 +1,86 @@
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel
-from typing import Optional
-import tempfile
 import os
-import subprocess
-import torch
-import gc
-import whisperx
-import io
-import json
-import traceback
-import httpx
 
 OLLAMA_URL = os.environ.get("OLLAMA_HOST", "http://localhost:11434" )
 DEBUG_LOG_TOGGLE = os.environ.get("DEBUG_LOG_TOGGLE", "OFF")
 
 # Import de tes fonctions locales existantes
-from transcript_summarize import summarize_chunk, synthesize_summaries, creation_template_from_file
+
 from conversion_output import generer_docx
-from email_utils import envoyer_email_notification
-from whisperx_transcriber import transcribe_audio_with_whisperx, convert_audio_to_wav
-#from ollama_client import inferring_ollama
+
+from routers import transcription, summarization
 
 app = FastAPI(title="API Transcription & Résumé")
 
-# --- MODÈLES DE DONNÉES (Pour valider les requêtes JSON) ---
-class ChunkRequest(BaseModel):
-    chunk: str
-    chunk_index: int
-    total_chunks: int
-    temperature: float
-    model_name: str
-    num_ctx: int
-    passes: int
+app.include_router(transcription.router)
+app.include_router(summarization.router_summarize)
+app.include_router(summarization.router_synthesize)
 
-class SynthesizeRequest(BaseModel):
-    combined_notes: str
-    prompt_cr: Optional[str] = None
-    format_cr: Optional[str] = None
-    temperature: float
-    model_name: str
-    num_ctx: int
-    email_destinataire: Optional[str] = None
+# --- MODÈLES DE DONNÉES (Pour valider les requêtes JSON) ---
+
+
+
 
 #pas implémenté
 class DocxRequest(BaseModel):
     markdown_text: str
 
 
-@app.get("/ressources/files")
-async def get_templates():
-    chemin_fichier = 'ressources/templates_reunions.json'
-    try:
-        with open(chemin_fichier, 'r', encoding='utf-8') as f:
-            donnees = json.load(f)
-            return donnees['templates']
-    except FileNotFoundError:
-        # C'est la bonne façon de remonter une erreur 404 à Streamlit
-        raise HTTPException(status_code=404, detail="Fichier introuvable")
+#@app.get("/ressources/files")
+#async def get_templates():
+#    chemin_fichier = 'ressources/templates_reunions.json'
+#    try:
+#        with open(chemin_fichier, 'r', encoding='utf-8') as f:
+#            donnees = json.load(f)
+#            return donnees['templates']
+#    except FileNotFoundError:
+#        # C'est la bonne façon de remonter une erreur 404 à Streamlit
+#        raise HTTPException(status_code=404, detail="Fichier introuvable")
     
 
-@app.get("/models/loaded")
-async def get_loaded_models():
-    async with httpx.AsyncClient() as client:
-        response = await client.get(f"{OLLAMA_URL}/api/ps", timeout=5)
-        response.raise_for_status()
-        return response.json().get("models", [])
+#@app.get("/models/loaded")
+#async def get_loaded_models():
+#    async with httpx.AsyncClient() as client:
+#        response = await client.get(f"{OLLAMA_URL}/api/ps", timeout=5)
+#        response.raise_for_status()
+#        return response.json().get("models", [])
 
 
-@app.post("/models/unload")
-async def unload_model(model_name: str):
-    """Force le déchargement d'un modèle."""
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            f"{OLLAMA_URL}/api/generate",
-            json={"model": model_name, "keep_alive": 0},
-            timeout=5
-        )
-        response.raise_for_status()
-        return {"message": f"Modèle {model_name} déchargé."}
+#@app.post("/models/unload")
+#async def unload_model(model_name: str):
+#    """Force le déchargement d'un modèle."""
+#    async with httpx.AsyncClient() as client:
+#        response = await client.post(
+#            f"{OLLAMA_URL}/api/generate",
+#            json={"model": model_name, "keep_alive": 0},
+#            timeout=5
+#        )
+#        response.raise_for_status()
+#        return {"message": f"Modèle {model_name} déchargé."}
 
 
 # --- 1. ENDPOINT DE TRANSCRIPTION ---
-@app.post("/transcribe/")
-async def transcribe_audio(file: UploadFile = File(...), model_choice: str = Form("large-v3"), email_destinataire: str = Form(None)):
-    file_extension = os.path.splitext(file.filename)[1].lower()
+@app.get("/")
+def read_root():
+    return {"status": "online", "message": "API Opérationnelle"}
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=file_extension) as tmp_file:
-        tmp_file.write(await file.read())
-        tmp_input_path = tmp_file.name
 
-    audio_path_to_process = None
 
-    try:
-        # Convert audio to WAV format
-        audio_path_to_process = convert_audio_to_wav(tmp_input_path)
 
-        # Transcribe with WhisperX
-        full_text = await transcribe_audio_with_whisperx(
-            audio_path=audio_path_to_process,
-            model_choice=model_choice,
-            device="cuda",
-            batch_size=16,
-            compute_type="float16"
-        )
 
-        if email_destinataire:
-            envoyer_email_notification(
-                destinataire=email_destinataire,
-                sujet="🎙️ Votre transcription est terminée !",
-                message="Le serveur a terminé de transcrire votre fichier audio. Vous pouvez retourner sur l'application pour lancer le résumé."
-            )
-        return {"transcript": full_text}
 
-    except Exception as e:
-        print("ERREUR CRITIQUE DANS LA TRANSCRIPTION :")
-        traceback.print_exc()  # Force l'affichage de l'erreur dans les logs Docker
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        if os.path.exists(tmp_input_path):
-            os.remove(tmp_input_path)
-        if audio_path_to_process and os.path.exists(audio_path_to_process):
-            os.remove(audio_path_to_process)
-
-# --- 2. ENDPOINTS OLLAMA ---
-@app.post("/summarize_chunk/")
-async def api_summarize_chunk(req: ChunkRequest):
-    try:
-        resume = summarize_chunk(
-            chunk=req.chunk,
-            chunk_index=req.chunk_index,
-            total_chunks=req.total_chunks,
-            temperature=req.temperature,
-            model_name=req.model_name,
-            num_ctx=req.num_ctx,
-            passes=req.passes
-        )
-        return {"summary": resume}
-    except Exception as e:
-        print(f"ERREUR CRITIQUE CAPTURÉE : {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return {"error": str(e)}
-
-@app.post("/synthesize/")
-async def api_synthesize(req: SynthesizeRequest):
-    if DEBUG_LOG_TOGGLE == "ON":
-        print("before try")
-    try:
-        if DEBUG_LOG_TOGGLE == "ON":
-            print("entered try")
-        final_summary = synthesize_summaries(
-        combined_text=req.combined_notes,
-        prompt_cr=req.prompt_cr,
-        format_cr=req.format_cr,
-        temperature=req.temperature,
-        model_name=req.model_name,
-        num_ctx=req.num_ctx,
-)
-        if DEBUG_LOG_TOGGLE == "ON":
-            print("after function")
-
-        if req.email_destinataire:
-            envoyer_email_notification(
-                destinataire=req.email_destinataire,
-                sujet="✍️ Votre compte-rendu est prêt !",
-                message="L'IA a terminé la rédaction de votre compte-rendu de réunion. Vous pouvez le télécharger au format Word sur l'application."
-            )
-        return {"final_summary": final_summary}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/create_template/")
-async def api_create_template(file: UploadFile = File(...), chosen_model: str = Form(...)):
-    try:
-        # Note : Il faudra peut-être adapter ta fonction creation_template_from_file 
-        # pour qu'elle accepte des bytes ou un chemin de fichier au lieu d'un objet st.file_uploader
-        file_bytes = await file.read()
-        template = creation_template_from_file(file_bytes, chosen_model)
-        return {"template": template}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+#@app.post("/create_template/")
+#async def api_create_template(file: UploadFile = File(...), chosen_model: str = Form(...)):
+#    try:
+#        # Note : Il faudra peut-être adapter ta fonction creation_template_from_file 
+#        # pour qu'elle accepte des bytes ou un chemin de fichier au lieu d'un objet st.file_uploader
+#        file_bytes = await file.read()
+#        template = creation_template_from_file(file_bytes, chosen_model)
+#        return {"template": template}
+#    except Exception as e:
+#        raise HTTPException(status_code=500, detail=str(e))
 
 # --- 3. ENDPOINT DOCX ---
 @app.post("/generate_docx/")

@@ -6,7 +6,7 @@ WORKDIR /app
 COPY requirements_frontend.txt .
 RUN pip install --no-cache-dir -r requirements_frontend.txt
 
-COPY app.py .
+COPY . .
 
 # Expose le port de Streamlit
 EXPOSE 8501
