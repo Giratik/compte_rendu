@@ -1,7 +1,24 @@
+# Web Framework & Server
 fastapi
 uvicorn
 python-multipart
-markdown
-htmldocx
+pydantic
+
+# AI & LLM (Ollama)
+ollama
+
+# Traitement Audio (WhisperX)
+torch
+whisperx
+
+# Manipulation de Documents (PDF & Word)
+PyPDF2
 python-docx
-pyannote.audio
+fpdf
+htmldocx
+markdown
+
+# Utilitaires
+typing-extensions
+
+transformers == 5.9.0

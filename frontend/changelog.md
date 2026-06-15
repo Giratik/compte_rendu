@@ -1,0 +1,17 @@
+## Veresion en date du 11/06/2026
+### Ajout du manuel d'utilisation dans l'application
+Une nouvelle page "Manuel" a été ajoutée dans laquelle se trouve le mode d'emploi de l'outil de Compte-rendu.
+
+
+## Version en date du 27/05/2026
+### Ajout de la page snapshot
+Cette nouvelle page fonctionne comme la précédente : elle rédige un compte-rendu à partir d'un fichier audio/vidéo. C'est la logique derrière qui rend cette page différente, cette page tente d'imiter le comportement d'un humain.  
+Voilà le workflow de chaque page :  
+
+
+| Page | Workflow |
+| :--- | :--- | 
+| **App** | L'IA divise la transcription en morceaux => l'IA rédige un résumé très dense en information => Chaque résumé est vérifié à nouveau par l'IA pour s'assurer que toutes les informations sont bien présentes => L'IA génère le compte-rendu final à partir des résumés précédents |
+| **snapshot** | L'IA divise la transcription en morceaux => l'IA rédige des notes pour chaque morceau => A partir de chacune des notes l'IA rédige un compte-rendu.|
+  
+Les commentaires sur l'interface et les couleurs sont les bienvenus.
