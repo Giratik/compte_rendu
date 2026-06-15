@@ -20,3 +20,5 @@ markdown
 
 # Utilitaires
 typing-extensions
+
+transformers == 5.9.0

@@ -1,0 +1,378 @@
+import streamlit as st
+import os
+import requests
+
+
+API_URL = os.environ.get("API_URL", "http://localhost:8001")
+DEFAULT_LLM_MODEL = os.environ.get("OLLAMA_DEFAULT_MODEL", "gemma4:e4b")
+CHUNK_CONTEXT_SIZE = os.environ.get("CHUNK_CONTEXT_SIZE", 30000)
+FULL_SUMMARY_CONTEXT_SIZE = os.environ.get("FULL_SUMMARY_CONTEXT_SIZE", 30000)
+TEMPERATURE = os.environ.get("TEMPERATURE", 0.15)
+
+CHUNK_WORDS_DEFAULT = int(os.environ.get("CHUNK_WORDS_DEFAULT", 6000)) # On passe de 300 à 6000
+CHUNK_WORDS_MIN = int(os.environ.get("CHUNK_WORDS_MIN", 1000))
+CHUNK_WORDS_MAX = int(os.environ.get("CHUNK_WORDS_MAX", 12000)) # Plafond haut
+CHUNK_WORDS_STEP = int(os.environ.get("CHUNK_WORDS_STEP", 500))
+
+OVERLAP_WORDS_DEFAULT = int(os.environ.get("OVERLAP_WORDS_DEFAULT", 150)) # Légèrement augmenté pour lier les gros blocs
+OVERLAP_WORDS_MIN = int(os.environ.get("OVERLAP_WORDS_MIN", 0))
+OVERLAP_WORDS_MAX = int(os.environ.get("OVERLAP_WORDS_MAX", 500))
+OVERLAP_WORDS_STEP = int(os.environ.get("OVERLAP_WORDS_STEP", 50))
+
+
+
+
+def render_summarizer():
+    if st.session_state.transcript_text:
+        st.markdown("---")
+        st.write("### Génération du  Compte-rendu")
+        #st.subheader("📝 Résultat de la transcription")
+        
+        transcript_editor = st.text_area("Texte à analyser", value=st.session_state.transcript_text, height=250)
+        transcript_editor = st.session_state.transcript_text
+    # ── Header ────────────────────────────────────────────────────────────────────
+    #st.markdown("""
+    #<div class="title-block">
+    #    <h1>Meeting <span>Notes</span> AI</h1>
+    #    <p>→ transcription → chunks → analyse ollama → compte-rendu</p>
+    #</div>
+    #""", unsafe_allow_html=True)
+        raw_text = transcript_editor #.read().decode("utf-8", errors="replace")
+        #clean_text = remove_timestamps(raw_text) if remove_ts else raw_text
+        #chunks = split_into_chunks(clean_text, chunk_words, overlap_words)
+        words_list = raw_text.split()
+        total_words = len(words_list)
+
+    # ── Sidebar ───────────────────────────────────────────────────────────────────
+    #with st.sidebar:
+    #    st.markdown('<div class="col-header">⚙ Configuration</div>', unsafe_allow_html=True)
+
+        selected_model = DEFAULT_LLM_MODEL
+
+        #chunk_words = st.slider(
+        #    "Taille des chunks (mots)",
+        #    min_value=CHUNK_WORDS_MIN, max_value=CHUNK_WORDS_MAX,
+        #    value=CHUNK_WORDS_DEFAULT, step=CHUNK_WORDS_STEP,
+        #)
+        #overlap_words = st.slider(
+        #    "Chevauchement (mots)",
+        #    min_value=OVERLAP_WORDS_MIN, max_value=OVERLAP_WORDS_MAX,
+        #    value=OVERLAP_WORDS_DEFAULT, step=OVERLAP_WORDS_STEP,
+        #)
+
+# ── Calcul dynamique de la taille de chunk optimale ──
+
+        if total_words <= 12000:
+            # Option A : One-Shot. Le texte tient très bien dans le contexte.
+            chunk_words = total_words
+            overlap_words = 0
+
+        else:
+            # Option B : Macro-Chunks. On divise pour avoir des blocs d'environ 6000 mots.
+            # On calcule le nombre de chunks nécessaires pour équilibrer la charge
+            nb_chunks = (total_words // 6000) + 1
+            
+            # On répartit le texte équitablement (+ une marge de sécurité)
+            chunk_words = min(int(total_words // nb_chunks) + 200, CHUNK_WORDS_MAX)
+            overlap_words = OVERLAP_WORDS_DEFAULT
+
+        # Assurons-nous que chunk_words ne dépasse JAMAIS la limite MAX
+        chunk_words = min(chunk_words, CHUNK_WORDS_MAX)
+        #remove_ts = st.checkbox("Supprimer les timestamps", value=True)
+
+#        st.markdown("---")
+#        host_label = OLLAMA_URL.replace("http://", "")
+#        st.markdown(
+#            f'<div style="color:#4b5563;font-size:0.7rem;font-family:\'JetBrains Mono\',monospace;">'
+#            f'Ollama @ {host_label}</div>',
+#            unsafe_allow_html=True,
+#        )
+#        connected, status = check_connection()
+#        color = "#22c55e" if connected else "#ef4444"
+#        st.markdown(
+#            f'<div style="color:{color};font-size:0.7rem;font-family:\'JetBrains Mono\',monospace;">'
+#            f'● {status}</div>',
+#            unsafe_allow_html=True,
+#        )
+
+
+    # ── File upload ───────────────────────────────────────────────────────────────
+    #uploaded_file = st.file_uploader(
+    #    "Déposez votre transcription (.txt)", type=["txt"], label_visibility="collapsed"
+    #)
+#
+    #if not uploaded_file:
+    #    st.markdown("""
+    #    <div style="text-align:center;padding:5rem 2rem;color:#2a2d35;
+    #                font-family:'JetBrains Mono',monospace;font-size:0.85rem;">
+    #        <div style="font-size:3rem;margin-bottom:1rem;opacity:0.3">📋</div>
+    #        <div>Déposez un fichier .txt pour commencer</div>
+    #        <div style="font-size:0.7rem;margin-top:0.5rem;color:#1e2128">
+    #            Formats supportés : transcription brute, avec timestamps HH:MM:SS, [HH:MM]
+    #        </div>
+    #    </div>""", unsafe_allow_html=True)
+    #    st.stop()
+
+
+
+
+    # ── Parse & chunk ─────────────────────────────────────────────────────────────
+
+    chunks = requests.post(f"{API_URL}/split_into_chunks/", json={"text": raw_text, "chunk_size": chunk_words, "overlap": overlap_words}).json()
+    if chunks != st.session_state.chunks:
+        st.session_state.chunks = chunks
+        st.session_state.summaries = [""] * len(chunks)
+        st.session_state.current_chunk = -1
+        st.session_state.global_summary = ""
+        st.session_state.processing = False
+        st.session_state.indices_to_process = []
+        st.session_state.process_pos = 0
+
+    n = len(chunks)
+
+
+    # ── Status bar ────────────────────────────────────────────────────────────────
+    done = sum(1 for s in st.session_state.summaries if s)
+    dot_class = "idle" if not st.session_state.processing else ""
+    st.markdown(f"""
+    <div class="status-bar">
+        <span class="status-dot {dot_class}"></span>
+        <span style="color:#2a2d35">|</span>
+        <span>{total_words} mots</span>
+        <span style="color:#2a2d35">|</span>
+        <span>{n} chunks</span>
+        <span style="color:#2a2d35">|</span>
+        <span> Taille des chunks : {chunk_words:.0f} mots</span>
+        <span style="color:#2a2d35">|</span>
+        <span style="color:#87CEEB">{done}/{n} analysés</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+    # Détecte si une reprise est possible
+    n_missing = sum(1 for s in st.session_state.summaries if not s)
+    can_resume = (
+        not st.session_state.processing
+        and n_missing > 0
+        and done > 0  # au moins un a été fait → c'est une reprise, pas un départ
+    )
+
+    col_b1, col_b2, col_b3, col_b4, _ = st.columns([1, 1, 1, 1, 1])
+    with col_b1:
+        run_all = st.button("▶ Analyser tout", use_container_width=True)
+    with col_b2:
+        run_missing = st.button("⟳ Manquants", use_container_width=True)
+    with col_b3:
+        resume_btn = st.button(
+            f"↺ Reprendre ({n_missing})" if can_resume else "↺ Reprendre",
+            use_container_width=True,
+            disabled=not can_resume,
+            help="Reprend depuis le dernier chunk non analysé" if can_resume else "Aucune reprise disponible",
+        )
+    with col_b4:
+        reset_btn = st.button("✕ Réinitialiser", use_container_width=True)
+    st.markdown('<div style="text-align: left; margin-bottom: 10px;"><a href="#compte-rendu-global" style="color: #87CEEB; text-decoration: none; font-family: \'JetBrains Mono\', monospace; font-size: 0.8rem;">👇 Aller au bas de la page une fois le traitement terminé</a></div>', unsafe_allow_html=True)
+
+    if reset_btn:
+        st.session_state.summaries = [""] * n
+        st.session_state.global_summary = ""
+        st.session_state.current_chunk = -1
+        st.session_state.processing = False
+        st.session_state.indices_to_process = []
+        st.session_state.process_pos = 0
+        st.rerun()
+
+    if run_all:
+        st.session_state.indices_to_process = list(range(n))
+        st.session_state.summaries = [""] * n
+        st.session_state.global_summary = ""
+        st.session_state.process_pos = 0
+        st.session_state.processing = True
+
+    elif run_missing:
+        st.session_state.indices_to_process = [
+            i for i, s in enumerate(st.session_state.summaries) if not s
+        ]
+        st.session_state.process_pos = 0
+        st.session_state.processing = True
+
+    elif resume_btn:
+        # Reprend à partir du premier chunk sans summary,
+        # en respectant l'ordre original des indices
+        missing = [i for i, s in enumerate(st.session_state.summaries) if not s]
+        if missing:
+            st.session_state.indices_to_process = missing
+            st.session_state.process_pos = 0
+            st.session_state.processing = True
+            st.toast(f"Reprise depuis le chunk #{missing[0]+1:02d}", icon="↺")
+
+    # Barre de progression globale affichée uniquement pendant le traitement
+    if st.session_state.processing and st.session_state.indices_to_process:
+        total = len(st.session_state.indices_to_process)
+        current = st.session_state.process_pos
+        
+        # Calcul du pourcentage (sécurisé entre 0 et 100)
+        progress_pct = int((current / total) * 100) if total > 0 else 0
+        progress_pct = min(max(progress_pct, 0), 100)
+        
+        st.progress(progress_pct, text=f"⏳ Analyse en cours... ({current}/{total})")
+
+    st.markdown("---")
+
+
+    # ── Chunk rows ────────────────────────────────────────────────────────────────
+    st.markdown('<div id="debut-chunks" class="col-header">📄 Extraits &nbsp;·&nbsp; 🤖 Notes</div>', unsafe_allow_html=True)
+
+    for i, chunk in enumerate(st.session_state.chunks):
+        with st.expander(f"Chunk #{i+1:02d}", expanded=True):
+           # st.markdown('<div class="chunk-row">', unsafe_allow_html=True)
+            
+            st.markdown(f"""
+                <div class="chunk-header">
+                    <span class="chunk-badge">#{i+1:02d}</span>
+                    <span class="chunk-label">{len(chunk.split())} mots</span>
+                </div>
+                """, unsafe_allow_html=True)
+            col_left, col_right = st.columns([1, 1], gap="large")
+            # Left — raw transcript excerpt
+            with col_left:
+                # Simplification des couleurs : vert si terminé, sinon gris foncé
+                border_color = "#22c55e" if st.session_state.summaries[i] else "#2a2d35"
+                
+                st.markdown(f"""
+                <div class="chunk-card" style="border-left-color:{border_color}">
+                    {chunk[:600]}{'…' if len(chunk) > 600 else ''}
+                </div>
+                """, unsafe_allow_html=True)
+
+            # Right — LLM summary 
+            with col_right:
+                summary = st.session_state.summaries[i]
+                
+                if not summary:
+                    st.markdown('<div class="summary-pending">En attente d\'analyse…</div>', unsafe_allow_html=True)
+                else:
+                    edited = st.text_area(
+                        f"Notes #{i+1:02d}",
+                        value=summary,
+                        key=f"summary_{i}",
+                        height=200,
+                        label_visibility="collapsed",
+                    )
+                    if edited != summary:
+                        st.session_state.summaries[i] = edited
+
+            st.markdown('</div>', unsafe_allow_html=True)
+
+
+# ── Step-by-step processing (runs after display) ──────────────────────────────
+    if st.session_state.processing and st.session_state.indices_to_process:
+        idx = st.session_state.indices_to_process[st.session_state.process_pos]
+        st.session_state.current_chunk = idx
+
+        # 1. Capture the JSON dictionary from the backend
+        result = requests.post(
+            f"{API_URL}/summarize_chunk/",
+            json={
+                "chunk": st.session_state.chunks[idx], 
+                "model": selected_model, 
+                "chunk_index": idx, 
+                "total_chunks": n,
+                "temperature": TEMPERATURE,      
+                "model_name": selected_model,    
+                "num_ctx": CHUNK_CONTEXT_SIZE,   
+                "passes": 1                      
+            }
+        ).json()
+        
+        # 👇 2. Extract ONLY the string from the "summary" key before saving
+        if isinstance(result, dict) and "summary" in result:
+            st.session_state.summaries[idx] = result["summary"]
+        else:
+            # Fallback in case the backend returns an error message or raw string
+            st.session_state.summaries[idx] = str(result)
+            
+        st.session_state.process_pos += 1
+
+        if st.session_state.process_pos >= len(st.session_state.indices_to_process):
+            st.session_state.processing = False
+            st.session_state.current_chunk = -1
+            st.session_state.indices_to_process = []
+            st.session_state.process_pos = 0
+
+        st.rerun()
+
+
+    # ── Global summary ────────────────────────────────────────────────────────────
+    st.markdown("---")
+
+    st.markdown('<div style="text-align: left; margin-bottom: 10px;"><a href="#debut-chunks" style="color: #87CEEB; text-decoration: none; font-family: \'JetBrains Mono\', monospace; font-size: 0.8rem;">▲ Remonter au début de la liste des extraits</a></div>', unsafe_allow_html=True)
+    st.markdown('<div id="compte-rendu-global" class="col-header">📋 Compte-rendu global</div>', unsafe_allow_html=True)
+
+    summaries_done = [s for s in st.session_state.summaries if s.strip()]
+    n_done = len(summaries_done)
+
+    disclaimer_accepted = st.checkbox(
+        "⚠️ En générant le compte-rendu, vous vous rendez responsable de son contenu s'il venait à être diffusé."
+    )
+
+    col_g1, col_g2, _ = st.columns([1.2, 1.2, 4])
+    with col_g1:
+        gen_global = st.button(
+            f"✦ Générer ({n_done}/{n})",
+            use_container_width=True,
+            # 👇 On verrouille le bouton si 0 résumé OU si la case n'est pas cochée
+            disabled=(n_done == 0) or not disclaimer_accepted,
+        )
+    #with col_g2:
+    #    if st.session_state.global_summary:
+    #        if st.button("⬇ Afficher brut", use_container_width=True):
+    #            st.code(st.session_state.global_summary, language=None)
+
+    if gen_global and summaries_done:
+        with st.spinner("Extraction des comparatifs…"):
+            #comparisons = extract_comparisons(st.session_state.chunks, selected_model)
+            comparisons = requests.post(f"{API_URL}/extract_comparisons/", json={"chunks": st.session_state.chunks, "model": selected_model}).json()
+        with st.spinner("Génération du compte-rendu global…"):
+            #st.session_state.global_summary = generate_global_summary(
+            #    summaries_done, comparisons, selected_model
+            #)
+            st.session_state.global_summary = requests.post(f"{API_URL}/generate_global_summary/", json={"summaries": summaries_done, "comparisons": comparisons, "model": selected_model}).json()
+
+    if st.session_state.global_summary:
+
+        edited_global = st.text_area(
+            "Compte-rendu global (modifiable)",
+            value=st.session_state.global_summary,
+            height=350,
+            key="global_edit",
+            label_visibility="collapsed",
+        )
+        if edited_global != st.session_state.global_summary:
+            st.session_state.global_summary = edited_global
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        st.download_button(
+            label="⬇ Télécharger le compte-rendu (.txt)",
+            data=st.session_state.global_summary,
+            file_name="compte_rendu_reunion.txt",
+            mime="text/plain",
+        )
+
+        try:
+            # Demande du DOCX au backend
+            payload_docx = {"markdown_text": st.session_state.global_summary}
+            res_docx = requests.post(f"{API_URL}/generate_docx/", json=payload_docx)
+            ftype = "Compte-rendu de la réunion"
+
+            if res_docx.status_code == 200:
+                st.download_button(
+                    label="📄 Télécharger en Word (.docx)",
+                    data=res_docx.content, # Les bytes bruts du fichier Word
+                    file_name=f"{ftype}.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                )
+            else:
+                st.error("Erreur API lors de la génération du Word.")
+        except Exception as e:
+            st.error(f"Erreur de connexion : {e}")

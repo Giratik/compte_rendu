@@ -44,13 +44,20 @@ def render_transcriber():
                 try:
                     response = requests.post(f"{API_URL}/transcribe/", files=files, data=data)
                     response.raise_for_status()
-                    
+
                     # On sauvegarde le résultat dans le state global pour que d'autres plugins (comme le résumé) puissent l'utiliser
                     st.session_state.transcript_text = response.json()["transcript"]
-                    
+
+                    # Calculate and display token count
+                    token_count = len(st.session_state.transcript_text.split())
+                    st.session_state.token_count = token_count
+
                     execution_time = time.time() - start_time
                     st.success(f"Transcription terminée en {int(execution_time // 60)} min !")
                     st.toast('🎙️ La transcription audio est terminée !', icon='✅')
+                    # Display token count
+                    if 'token_count' in st.session_state:
+                        st.info(f"📊 Nombre de tokens dans le transcript : {st.session_state.token_count}")
                 except Exception as e:
                     st.error(f"Erreur de communication : {e}")
                 finally:
@@ -62,4 +69,10 @@ def render_transcriber():
         if uploaded_text is not None:
             if st.button("Charger ce texte", key="btn_load_txt"):
                 st.session_state.transcript_text = uploaded_text.getvalue().decode("utf-8")
+                # Calculate and display token count for text file
+                token_count = len(st.session_state.transcript_text.split())
+                st.session_state.token_count = token_count
                 st.success("✅ Fichier texte chargé avec succès !")
+                # Display token count
+                if 'token_count' in st.session_state:
+                    st.info(f"📊 Nombre de tokens dans le transcript : {st.session_state.token_count}")

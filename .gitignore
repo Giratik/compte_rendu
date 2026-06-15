@@ -8,3 +8,16 @@
 mes_images_app.tar
 /prometheus
 /meh
+backend_function_mapping.md
+frontend/pages/__pycache__
+backend/__pycache__
+/sandbox
+
+
+
+
+
+
+
+
+

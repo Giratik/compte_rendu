@@ -18,7 +18,7 @@ client = Client(
 
     
 def inferring_ollama(messages, model, temperature=0.4, stream=False,
-                     context_size=12000, seed=None, keep_alive=-1, **kwargs):
+                     context_size=30000, seed=None, keep_alive=-1, **kwargs):
     start = time.time()
     try:
         response = client.chat(

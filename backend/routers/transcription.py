@@ -26,8 +26,8 @@ async def transcribe_audio(
             audio_path=audio_path_to_process,
             model_choice=model_choice,
             device="cuda",
-            batch_size=16,
-            compute_type="float16"
+            batch_size=4,
+            compute_type="int8_float16"
         )
 
         return {"transcript": full_text}

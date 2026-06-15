@@ -20,11 +20,7 @@ html, body, [class*="css"] {
     font-family: 'Syne', sans-serif;
 }
 
-/* Background */
-.stApp {
-    background-color: #0d0f14;
-    color: #e8e4dc;
-}
+
 
 /* Hide default streamlit elements */
 #MainMenu, footer, header { visibility: hidden; }
@@ -226,7 +222,7 @@ div[data-testid="stVerticalBlock"] > div > div > div[data-testid="column"] {
 """, unsafe_allow_html=True)
 
 # ── Constants ─────────────────────────────────────────────────────────────────
-OLLAMA_URL = "http://10.75.12.10:11434"
+OLLAMA_URL = "http://10.75.12.5:11434"
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -301,7 +297,7 @@ def summarize_chunk(chunk: str, model: str, chunk_index: int, total_chunks: int)
             return r.json()["message"]["content"].strip()
         return f"⚠️ Erreur {r.status_code}: {r.text[:200]}"
     except requests.exceptions.ConnectionError:
-        return "⚠️ Impossible de joindre Ollama (10.75.12.10:11434)"
+        return "⚠️ Impossible de joindre Ollama (10.75.12.5:11434)"
     except Exception as e:
         return f"⚠️ Erreur: {str(e)}"
 
@@ -488,7 +484,7 @@ with st.sidebar:
     remove_ts = st.checkbox("Supprimer les timestamps", value=True)
 
     st.markdown("---")
-    st.markdown('<div style="color:#4b5563;font-size:0.7rem;font-family:\'JetBrains Mono\',monospace;">Ollama @ 10.75.12.10:11434</div>', unsafe_allow_html=True)
+    st.markdown('<div style="color:#4b5563;font-size:0.7rem;font-family:\'JetBrains Mono\',monospace;">Ollama @ 10.75.12.5:11434</div>', unsafe_allow_html=True)
 
     # Connection check
     try:
