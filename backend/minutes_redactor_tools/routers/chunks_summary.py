@@ -1,3 +1,5 @@
+#backend/routers/chunk_summary.py
+
 """
 FastAPI routers for meeting notes analysis - human-like extraction and summarization.
 Delegates business logic to chunk_analysis.py functions.
@@ -5,7 +7,7 @@ Delegates business logic to chunk_analysis.py functions.
 
 from fastapi import APIRouter
 from pydantic import BaseModel
-from chunk_analysis import (
+from minutes_redactor_tools.functions_folder.chunk_analysis import (
     remove_timestamps,
     split_into_chunks,
     summarize_chunk,

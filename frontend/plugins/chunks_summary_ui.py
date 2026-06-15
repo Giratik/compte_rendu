@@ -272,7 +272,7 @@ def render_summarizer():
 
         # 1. Capture the JSON dictionary from the backend
         result = requests.post(
-            f"{API_URL}/summarize_chunk/",
+            f"{API_URL}/summarize_chunk/", # pointe vers chunk_analysis.py
             json={
                 "chunk": st.session_state.chunks[idx], 
                 "model": selected_model, 
@@ -332,12 +332,12 @@ def render_summarizer():
     if gen_global and summaries_done:
         with st.spinner("Extraction des comparatifs…"):
             #comparisons = extract_comparisons(st.session_state.chunks, selected_model)
-            comparisons = requests.post(f"{API_URL}/extract_comparisons/", json={"chunks": st.session_state.chunks, "model": selected_model}).json()
+            comparisons = requests.post(f"{API_URL}/extract_comparisons/", json={"chunks": st.session_state.chunks, "model": selected_model}).json() # pointe vers chunk_analysis.py
         with st.spinner("Génération du compte-rendu global…"):
             #st.session_state.global_summary = generate_global_summary(
             #    summaries_done, comparisons, selected_model
             #)
-            st.session_state.global_summary = requests.post(f"{API_URL}/generate_global_summary/", json={"summaries": summaries_done, "comparisons": comparisons, "model": selected_model}).json()
+            st.session_state.global_summary = requests.post(f"{API_URL}/generate_global_summary/", json={"summaries": summaries_done, "comparisons": comparisons, "model": selected_model}).json() # pointe vers chunk_analysis.py
 
     if st.session_state.global_summary:
 

@@ -2,7 +2,7 @@ import os
 import tempfile
 import traceback
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
-from whisperx_transcriber import transcribe_audio_with_whisperx, convert_audio_to_wav
+from transcription_tools.utility_functions.whisperx_transcriber import transcribe_audio_with_whisperx, convert_audio_to_wav
 
 # Création du routeur pour ce "plugin"
 router = APIRouter(prefix="/transcribe", tags=["Transcription"])

@@ -1,4 +1,6 @@
 
+from minutes_redactor_tools.routers import chunks_summary
+from transcription_tools.routers import transcription
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel
@@ -9,16 +11,11 @@ DEBUG_LOG_TOGGLE = os.environ.get("DEBUG_LOG_TOGGLE", "OFF")
 
 # Import de tes fonctions locales existantes
 
-from conversion_output import generer_docx
-
-from routers import transcription, summarization, chunks_summary
+from minutes_redactor_tools.functions_folder.conversion_output import generer_docx
 
 app = FastAPI(title="API Transcription & Résumé")
 
 app.include_router(transcription.router)
-
-app.include_router(summarization.router_summarize)
-app.include_router(summarization.router_synthesize)
 
 app.include_router(chunks_summary.router_chunk_split)
 app.include_router(chunks_summary.router_summarize)
