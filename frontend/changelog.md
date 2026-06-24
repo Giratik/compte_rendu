@@ -1,4 +1,8 @@
-## Veresion en date du 11/06/2026
+## Version en date du 24/06/2026
+### Ajout d'un mode de traitement "automatique"
+Maintenant, par défaut, lorsque vous lancez la transcription de votre fichier audio/vidéo ou uploader transcript texte, tous les processus d'extraction et d'analyses se feront automatiquement jusqu'à la génération du compte-rendu incluse. Vous pouvez néanmoins désactiver l'option dans la marge.
+
+## Version en date du 11/06/2026
 ### Ajout du manuel d'utilisation dans l'application
 Une nouvelle page "Manuel" a été ajoutée dans laquelle se trouve le mode d'emploi de l'outil de Compte-rendu.
 
@@ -13,5 +17,3 @@ Voilà le workflow de chaque page :
 | :--- | :--- | 
 | **App** | L'IA divise la transcription en morceaux => l'IA rédige un résumé très dense en information => Chaque résumé est vérifié à nouveau par l'IA pour s'assurer que toutes les informations sont bien présentes => L'IA génère le compte-rendu final à partir des résumés précédents |
 | **snapshot** | L'IA divise la transcription en morceaux => l'IA rédige des notes pour chaque morceau => A partir de chacune des notes l'IA rédige un compte-rendu.|
-  
-Les commentaires sur l'interface et les couleurs sont les bienvenus.

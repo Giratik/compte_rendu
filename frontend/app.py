@@ -3,6 +3,7 @@
 import streamlit as st
 import os
 import requests
+import uuid
 
 from plugins.transcriber_ui import render_transcriber
 from plugins.chunks_summary_ui import render_summarizer
@@ -15,13 +16,38 @@ if os.path.exists(LOGO_PATH):
         st.logo(LOGO_PATH)
 
 # Initialisation des variables de session
-for key in ["transcript_text", "format_instructions_fichier", "final_summary", "combined_notes", "is_transcribing"]:
+for key in ["transcript_text", "format_instructions_fichier", "final_summary", "combined_notes", "is_transcribing", "auto_process_enabled"]:
     if key not in st.session_state:
         # On initialise is_transcribing à False par défaut
         if key == "is_transcribing":
             st.session_state[key] = False
+        elif key == "auto_process_enabled":
+            st.session_state[key] = True  # Mode automatique activé par défaut
         else:
             st.session_state[key] = None if key != "transcript_text" else ""
+
+# Côté Streamlit, une seule fois au démarrage de la session
+if "session_id" not in st.session_state:
+    st.session_state.session_id = str(uuid.uuid4())
+
+
+# --- Sidebar avec options ---
+with st.sidebar:
+    st.markdown("### ⚙️ Options")
+    st.toggle(
+    "Mode automatique",
+    key="auto_process_enabled",
+    help="Si activé, le processus de génération de compte-rendu se lance automatiquement après la transcription"
+)
+
+    # Disclaimer dans la sidebar
+    st.markdown("---")
+    st.markdown("""
+    <div style="font-size: 0.75rem; color: rgb(0, 0, 0); font-style: italic; margin-top: 1rem;">
+        ⚠️ En activant le mode automatique, vous vous engagez à être responsable du contenu généré
+        et de son utilisation.
+    </div>
+    """, unsafe_allow_html=True)
 
 st.markdown("""
 <style>

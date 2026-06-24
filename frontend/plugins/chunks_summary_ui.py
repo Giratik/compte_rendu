@@ -130,6 +130,16 @@ def render_summarizer():
 
     n = len(chunks)
 
+    # Déclenchement automatique si le mode automatique est activé
+    if (st.session_state.get("auto_process_enabled", False) and
+        not st.session_state.processing and
+        n > 0 and
+        all(not s for s in st.session_state.summaries)):  # Aucun résumé existant
+        st.session_state.indices_to_process = list(range(n))
+        st.session_state.process_pos = 0
+        st.session_state.processing = True
+        st.toast("🚀 Mode automatique activé - Analyse en cours...", icon="🚀")
+
 
     # ── Status bar ────────────────────────────────────────────────────────────────
     done = sum(1 for s in st.session_state.summaries if s)
@@ -312,9 +322,18 @@ def render_summarizer():
     summaries_done = [s for s in st.session_state.summaries if s.strip()]
     n_done = len(summaries_done)
 
-    disclaimer_accepted = st.checkbox(
-        "⚠️ En générant le compte-rendu, vous vous rendez responsable de son contenu s'il venait à être diffusé."
-    )
+    # Accepter automatiquement le disclaimer en mode automatique
+    if st.session_state.get("auto_process_enabled", False):
+        disclaimer_accepted = True
+        st.checkbox(
+            "⚠️ En générant le compte-rendu, vous vous rendez responsable de son contenu s'il venait à être diffusé.",
+            value=True,
+            disabled=True
+        )
+    else:
+        disclaimer_accepted = st.checkbox(
+            "⚠️ En générant le compte-rendu, vous vous rendez responsable de son contenu s'il venait à être diffusé."
+        )
 
     col_g1, col_g2, _ = st.columns([1.2, 1.2, 4])
     with col_g1:
@@ -324,6 +343,16 @@ def render_summarizer():
             # 👇 On verrouille le bouton si 0 résumé OU si la case n'est pas cochée
             disabled=(n_done == 0) or not disclaimer_accepted,
         )
+    # Génération automatique du compte-rendu final si le mode automatique est activé
+    if (st.session_state.get("auto_process_enabled", False) and
+        n_done == n and n_done > 0 and  # Tous les résumés sont terminés
+        not st.session_state.global_summary and  # Pas encore de compte-rendu global
+        disclaimer_accepted):
+        with st.spinner("Extraction des comparatifs…"):
+            comparisons = requests.post(f"{API_URL}/extract_comparisons/", json={"chunks": st.session_state.chunks, "model": selected_model}).json()
+        with st.spinner("Génération du compte-rendu global…"):
+            st.session_state.global_summary = requests.post(f"{API_URL}/generate_global_summary/", json={"summaries": summaries_done, "comparisons": comparisons, "model": selected_model}).json()
+        st.toast("📋 Compte-rendu global généré automatiquement !", icon="📋")
     #with col_g2:
     #    if st.session_state.global_summary:
     #        if st.button("⬇ Afficher brut", use_container_width=True):
