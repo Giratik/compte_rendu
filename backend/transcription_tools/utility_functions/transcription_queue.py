@@ -1,3 +1,5 @@
+#/backend/transcription_tools/utility_functions/transcription_queue.py
+
 import asyncio
 from collections import deque
 from typing import Dict, Optional, Tuple
@@ -8,6 +10,7 @@ class TranscriptionQueue:
     def __init__(self):
         self.queue = deque()
         self.current_user: Optional[str] = None
+        self.current_user_token: Optional[str] = None  # Store the token of the current user
         self.lock = asyncio.Lock()
         self.condition = asyncio.Condition(self.lock)
 
@@ -15,16 +18,26 @@ class TranscriptionQueue:
         async with self.lock:
             queue_token = str(uuid.uuid4())
             self.queue.append((user_id, queue_token))
-            # Position doit compter le slot occupé + la file d'attente
+            # La position doit inclure le slot actuellement occupé
             position = len(self.queue) + (1 if self.current_user is not None else 0)
             return position, queue_token
 
     async def get_queue_position(self, queue_token: str) -> Optional[int]:
         async with self.lock:
-            offset = 1 if self.current_user is not None else 0
+            # First check if this token belongs to the current user
+            if self.current_user is not None and self.current_user_token == queue_token:
+                # This is the current user's token - they are in position 1
+                return 1
+
+            # Check if token is in queue
             for i, (user_id, token) in enumerate(self.queue):
                 if token == queue_token:
-                    return i + 1 + offset
+                    # Token is in queue, calculate position
+                    # If there's a current user, they count as position 1, so queue positions start from 2
+                    offset = 1 if self.current_user is not None else 0
+                    return i + 1 + offset  # +1 for 1-based indexing, +offset for current user
+
+            # Token not found anywhere
             return None
 
     async def acquire_transcription_slot(self, queue_token: str) -> bool:
@@ -37,7 +50,8 @@ class TranscriptionQueue:
             # Check if this token is at the front of the queue
             if len(self.queue) > 0 and self.queue[0][1] == queue_token:
                 # Remove from queue and set as current user
-                self.current_user = self.queue.popleft()[0]
+                self.current_user, user_token = self.queue.popleft()
+                self.current_user_token = user_token  # Store the token too
                 return True
             return False
 
@@ -45,6 +59,7 @@ class TranscriptionQueue:
         """Release the current transcription slot"""
         async with self.lock:
             self.current_user = None
+            self.current_user_token = None
 
     async def get_current_queue_info(self) -> Dict:
         """Get current queue information"""

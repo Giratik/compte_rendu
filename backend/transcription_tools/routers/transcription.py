@@ -9,10 +9,25 @@ from transcription_tools.utility_functions.transcription_queue import transcript
 # Création du routeur pour ce "plugin"
 router = APIRouter(prefix="/transcribe", tags=["Transcription"])
 
+@router.get("/queue-position/")
+async def get_queue_position(queue_token: str):
+    """Endpoint to check current queue position without uploading file"""
+    if not queue_token:
+        raise HTTPException(status_code=400, detail="queue_token is required")
+
+    position = await transcription_queue.get_queue_position(queue_token)
+    if position is None:
+        raise HTTPException(status_code=404, detail="Queue token not found")
+
+    return {
+        "position": position,
+        "message": f"Vous êtes en position {position} dans la file d'attente"
+    }
+
 @router.post("/")
 async def transcribe_audio(
-    file: UploadFile = File(...), 
-    model_choice: str = Form("large-v3"), 
+    file: UploadFile = File(...),
+    model_choice: str = Form("large-v3"),
     queue_token: str = Form(None),
     session_id: str = Form(None),
 ):

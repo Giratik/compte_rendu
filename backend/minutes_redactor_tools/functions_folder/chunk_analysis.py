@@ -1,3 +1,5 @@
+#backend/minutes_redactor_tools/functions_folder/chunk_analysis.py
+
 """
 Chunk analysis and processing functions for meeting transcriptions.
 Handles text splitting, summarization, and report generation.
@@ -32,7 +34,7 @@ def split_into_chunks(text: str, chunk_size: int, overlap: int = 50) -> list[str
 
 # ── LLM tasks ─────────────────────────────────────────────────────────────────
 
-def summarize_chunk(chunk: str, model: str, chunk_index: int, total_chunks: int) -> str:
+async def summarize_chunk(chunk: str, model: str, chunk_index: int, total_chunks: int) -> str:
     messages = [
         {
             "role": "system",
@@ -59,13 +61,13 @@ def summarize_chunk(chunk: str, model: str, chunk_index: int, total_chunks: int)
         }
     ]
     try:
-        response = inferring_ollama(messages, model, timeout=120)
+        response = await inferring_ollama(messages, model)
         return response.message.content
     except Exception as e:
         return f"⚠️ Erreur: {str(e)}"
 
 
-def extract_comparisons(chunks: list[str], model: str) -> str:
+async def extract_comparisons(chunks: list[str], model: str) -> str:
     full_text = "\n\n".join([f"[Extrait {i+1}]\n{c}" for i, c in enumerate(chunks)])
     messages = [
         {
@@ -95,14 +97,14 @@ def extract_comparisons(chunks: list[str], model: str) -> str:
         }
     ]
     try:
-        response = inferring_ollama(messages, model, timeout=300)
+        response = await inferring_ollama(messages, model)
         result = response.message.content
         return "" if "AUCUN_COMPARATIF" in result else result
     except Exception:
         return ""
 
 
-def generate_global_summary(summaries: list[str], model: str) -> str:
+async def generate_global_summary(summaries: list[str], model: str) -> str:
     combined = "\n\n".join(
         [f"[Partie {i+1}/{len(summaries)}]\n{s}" for i, s in enumerate(summaries)]
     )
@@ -133,13 +135,13 @@ def generate_global_summary(summaries: list[str], model: str) -> str:
         }
     ]
     try:
-        response = inferring_ollama(messages, model, timeout=300)
+        response = await inferring_ollama(messages, model)
         return response.message.content
     except Exception as e:
         return f"⚠️ Erreur: {str(e)}"
 
 
-def generate_global_summary_with_comparisons(summaries: list[str], comparisons: str, model: str) -> str:
+async def generate_global_summary_with_comparisons(summaries: list[str], comparisons: str, model: str) -> str:
     combined = "\n\n".join(
         [f"[Partie {i+1}/{len(summaries)}]\n{s}" for i, s in enumerate(summaries)]
     )
@@ -181,7 +183,7 @@ def generate_global_summary_with_comparisons(summaries: list[str], comparisons: 
         }
     ]
     try:
-        response = inferring_ollama(messages, model, timeout=300)
+        response = await inferring_ollama(messages, model)
         return response.message.content
     except Exception as e:
         return f"⚠️ Erreur: {str(e)}"

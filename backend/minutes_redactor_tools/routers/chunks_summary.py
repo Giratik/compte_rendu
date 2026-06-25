@@ -1,10 +1,5 @@
 #backend/routers/chunk_summary.py
 
-"""
-FastAPI routers for meeting notes analysis - human-like extraction and summarization.
-Delegates business logic to chunk_analysis.py functions.
-"""
-
 from fastapi import APIRouter
 from pydantic import BaseModel
 from minutes_redactor_tools.functions_folder.chunk_analysis import (
@@ -32,9 +27,9 @@ class SummarizeChunkRequest(BaseModel):
     total_chunks: int
 
     temperature: float
-    model_name: str 
-    num_ctx: int 
-    passes: int 
+    model_name: str
+    num_ctx: int
+    passes: int
 
 
 class ExtractComparisonsRequest(BaseModel):
@@ -61,13 +56,14 @@ router_generate_global_summary = APIRouter(prefix="/generate_global_summary", ta
 @router_chunk_split.post("/")
 async def api_split_into_chunks(request: ChunkSplitRequest):
     """Split text into word-based chunks with optional overlap."""
+    # Pas d'appel Ollama ici, pas besoin d'await — reste synchrone, c'est correct
     return split_into_chunks(request.text, request.chunk_size, request.overlap)
 
 
 @router_summarize.post("/")
 async def api_summarize_chunk(request: SummarizeChunkRequest) -> str:
     """Summarize a single transcript chunk as live meeting notes."""
-    return summarize_chunk(request.chunk, request.model, request.chunk_index, request.total_chunks)
+    return await summarize_chunk(request.chunk, request.model, request.chunk_index, request.total_chunks)
 
 
 @router_extract_comparisons.post("/")
@@ -76,7 +72,7 @@ async def api_extract_comparisons(request: ExtractComparisonsRequest) -> str:
     Scan all raw chunks for tool/product comparisons (price, efficiency, etc.).
     Returns a structured extraction, or empty string if nothing found.
     """
-    return extract_comparisons(request.chunks, request.model)
+    return await extract_comparisons(request.chunks, request.model)
 
 
 @router_generate_global_summary.post("/")
@@ -86,5 +82,5 @@ async def api_generate_global_summary(request: GenerateGlobalSummaryRequest) -> 
     If comparisons is non-empty, a dedicated section is appended with raw figures preserved.
     """
     if request.comparisons:
-        return generate_global_summary_with_comparisons(request.summaries, request.comparisons, request.model)
-    return generate_global_summary(request.summaries, request.model)
+        return await generate_global_summary_with_comparisons(request.summaries, request.comparisons, request.model)
+    return await generate_global_summary(request.summaries, request.model)
