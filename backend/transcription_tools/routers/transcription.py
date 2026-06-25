@@ -90,3 +90,15 @@ async def transcribe_audio(
             os.remove(tmp_input_path)
         if audio_path_to_process and os.path.exists(audio_path_to_process):
             os.remove(audio_path_to_process)
+
+
+@router.get("/queue-position")
+async def get_queue_position(queue_token: str):
+    position = await transcription_queue.get_queue_position(queue_token)
+    if position is None:
+        # Le token n'est plus dans la queue : soit il est en cours de traitement, soit invalide
+        is_current = await transcription_queue.is_current_token(queue_token)
+        if is_current:
+            return {"status": "processing"}
+        return {"status": "error", "message": "Token de file d'attente invalide ou expiré"}
+    return {"status": "waiting", "position": position}

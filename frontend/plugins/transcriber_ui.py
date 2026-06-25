@@ -4,6 +4,7 @@ import streamlit as st
 import requests
 import time
 import os
+import uuid
 
 API_URL = os.environ.get("API_URL", "http://localhost:8001")
 WHISPER_MODEL = os.environ.get("WHISPER_MODEL", "large-v3")
@@ -15,6 +16,9 @@ def render_transcriber():
     # Gestion locale de l'état du plugin
     if "is_transcribing" not in st.session_state:
         st.session_state.is_transcribing = False
+    if "session_id" not in st.session_state:
+        import uuid
+        st.session_state.session_id = str(uuid.uuid4())
 
     input_mode = st.radio(
         "Comment voulez-vous fournir le texte ?",
@@ -38,14 +42,22 @@ def render_transcriber():
 
         # Show queue status if in queue
         if st.session_state.transcription_queue_token and st.session_state.transcription_queue_position:
-            st.info(f"🕒 Vous êtes en position {st.session_state.transcription_queue_position} dans la file d'attente")
-
-            # Auto-start transcription if it's our turn (position 1)
-            if st.session_state.transcription_queue_position == 1 and not st.session_state.is_transcribing and uploaded_file is not None:
-                st.info("🚀 C'est votre tour ! La transcription démarre automatiquement...")
+            #st.info(f"🕒 Position {st.session_state.transcription_queue_position} dans la file")
+            # Toujours relancer une vérification, peu importe la position affichée
+            if not st.session_state.is_transcribing:
                 st.session_state.is_transcribing = True
                 st.rerun()
 
+            # Auto-start transcription if it's our turn (position 1)
+            if st.session_state.transcription_queue_position == 1 and not st.session_state.is_transcribing:
+                st.success("🚀 C'est votre tour ! Démarrage de la transcription...")
+                time.sleep(1.5)
+                st.session_state.is_transcribing = True
+                st.rerun()
+            elif not st.session_state.is_transcribing:
+                st.info(f"🕒 Position {st.session_state.transcription_queue_position} dans la file")
+                st.session_state.is_transcribing = True
+                st.rerun()
         bouton_disabled = (uploaded_file is None) or st.session_state.is_transcribing
         label_bouton = "⌛ Transcription en cours..." if st.session_state.is_transcribing else "Lancer la transcription"
 

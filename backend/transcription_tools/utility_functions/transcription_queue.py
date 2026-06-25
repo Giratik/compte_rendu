@@ -69,6 +69,12 @@ class TranscriptionQueue:
                 "queue_length": len(self.queue),
                 "is_busy": self.current_user is not None
             }
-
+    async def is_current_token(self, queue_token: str) -> bool:
+        async with self.lock:
+            return self.current_user == queue_token  # si tu stockes le token comme current_user
+    
 # Global queue instance
 transcription_queue = TranscriptionQueue()
+
+
+    
