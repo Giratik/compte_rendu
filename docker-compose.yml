@@ -5,7 +5,7 @@ services:
     build: 
       context: ./backend
       dockerfile: Dockerfile
-    container_name: ia-backend
+    container_name: CR_backend
     volumes:
       - /home/paulvidouze/.cache/huggingface:/root/.cache/huggingface
       - /home/paulvidouze/.cache/torch:/root/.cache/torch
@@ -25,7 +25,7 @@ services:
     build: 
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: ia-frontend
+    container_name: CR_frontend
     ports:
       - "8502:8501" 
     environment:

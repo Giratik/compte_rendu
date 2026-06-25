@@ -19,10 +19,17 @@ OVERLAP_WORDS_MIN = int(os.environ.get("OVERLAP_WORDS_MIN", 0))
 OVERLAP_WORDS_MAX = int(os.environ.get("OVERLAP_WORDS_MAX", 500))
 OVERLAP_WORDS_STEP = int(os.environ.get("OVERLAP_WORDS_STEP", 50))
 
-
+from config.prompts import DEFAULT_COMP_SYSTEM, DEFAULT_CHUNK_SYSTEM, DEFAULT_GLOBAL_SYSTEM
 
 
 def render_summarizer():
+
+    if "prompt_chunk_system" not in st.session_state:
+        st.session_state.prompt_chunk_system = DEFAULT_CHUNK_SYSTEM
+    if "prompt_global_system" not in st.session_state:
+        st.session_state.prompt_global_system = DEFAULT_GLOBAL_SYSTEM
+    if "prompt_comp_system" not in st.session_state:
+        st.session_state.prompt_comp_system = DEFAULT_COMP_SYSTEM
     if st.session_state.transcript_text:
         st.markdown("---")
         st.write("### Génération du  Compte-rendu")
@@ -291,7 +298,8 @@ def render_summarizer():
                 "temperature": TEMPERATURE,      
                 "model_name": selected_model,    
                 "num_ctx": CHUNK_CONTEXT_SIZE,   
-                "passes": 1                      
+                "passes": 1    ,
+                "custom_system_prompt": st.session_state.prompt_chunk_system,                  
             }
         ).json()
         
@@ -349,9 +357,9 @@ def render_summarizer():
         not st.session_state.global_summary and  # Pas encore de compte-rendu global
         disclaimer_accepted):
         with st.spinner("Extraction des comparatifs…"):
-            comparisons = requests.post(f"{API_URL}/extract_comparisons/", json={"chunks": st.session_state.chunks, "model": selected_model}).json()
+            comparisons = requests.post(f"{API_URL}/extract_comparisons/", json={"chunks": st.session_state.chunks, "model": selected_model, "custom_system_prompt": st.session_state.prompt_comp_system}).json()
         with st.spinner("Génération du compte-rendu global…"):
-            st.session_state.global_summary = requests.post(f"{API_URL}/generate_global_summary/", json={"summaries": summaries_done, "comparisons": comparisons, "model": selected_model}).json()
+            st.session_state.global_summary = requests.post(f"{API_URL}/generate_global_summary/", json={"summaries": summaries_done, "comparisons": comparisons, "model": selected_model, "custom_system_prompt": st.session_state.prompt_global_system}).json()
         st.toast("📋 Compte-rendu global généré automatiquement !", icon="📋")
     #with col_g2:
     #    if st.session_state.global_summary:
@@ -360,13 +368,10 @@ def render_summarizer():
 
     if gen_global and summaries_done:
         with st.spinner("Extraction des comparatifs…"):
-            #comparisons = extract_comparisons(st.session_state.chunks, selected_model)
-            comparisons = requests.post(f"{API_URL}/extract_comparisons/", json={"chunks": st.session_state.chunks, "model": selected_model}).json() # pointe vers chunk_analysis.py
+            comparisons = requests.post(f"{API_URL}/extract_comparisons/", json={"chunks": st.session_state.chunks, "model": selected_model, "custom_system_prompt": st.session_state.prompt_comp_system}).json() # pointe vers chunk_analysis.py
         with st.spinner("Génération du compte-rendu global…"):
-            #st.session_state.global_summary = generate_global_summary(
-            #    summaries_done, comparisons, selected_model
-            #)
-            st.session_state.global_summary = requests.post(f"{API_URL}/generate_global_summary/", json={"summaries": summaries_done, "comparisons": comparisons, "model": selected_model}).json() # pointe vers chunk_analysis.py
+
+            st.session_state.global_summary = requests.post(f"{API_URL}/generate_global_summary/", json={"summaries": summaries_done, "comparisons": comparisons, "model": selected_model, "custom_system_prompt": st.session_state.prompt_global_system}).json() # pointe vers chunk_analysis.py
 
     if st.session_state.global_summary:
 

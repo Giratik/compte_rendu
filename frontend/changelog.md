@@ -1,3 +1,8 @@
+## Version en date du 25/06/2026
+### Ajout d'un système de file d'attente pour la transcription
+Puisque la transcription est gourmand en mémoire, j'ai mis un système de file d'attente pour réduire l'utilisation de l'outil à 1 personne à la fois tout en indiquant aux utilisateurs que l'outil fonctionne et ne tourne pas dans le vide. A noter que la file d'attente ne concerne que l'outil de transcription, il n'y a pas cette limite sur l'outil de génération de compte-rendu donc en ayant un transcript texte vous n'avez pas à attendre dans cette file.
+
+
 ## Version en date du 24/06/2026
 ### Ajout d'un mode de traitement "automatique"
 Maintenant, par défaut, lorsque vous lancez la transcription de votre fichier audio/vidéo ou uploader transcript texte, tous les processus d'extraction et d'analyses se feront automatiquement jusqu'à la génération du compte-rendu incluse. Vous pouvez néanmoins désactiver l'option dans la marge.

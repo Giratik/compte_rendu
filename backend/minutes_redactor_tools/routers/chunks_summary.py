@@ -11,6 +11,7 @@ from minutes_redactor_tools.functions_folder.chunk_analysis import (
     generate_global_summary_with_comparisons,
 )
 
+from typing import Optional
 
 # ── Request Models ─────────────────────────────────────────────────────────────
 
@@ -31,16 +32,22 @@ class SummarizeChunkRequest(BaseModel):
     num_ctx: int
     passes: int
 
+    custom_system_prompt: Optional[str] = None
+
 
 class ExtractComparisonsRequest(BaseModel):
     chunks: list[str]
     model: str
+
+    custom_system_prompt: Optional[str] = None
 
 
 class GenerateGlobalSummaryRequest(BaseModel):
     summaries: list[str]
     model: str
     comparisons: str = ""
+
+    custom_system_prompt: Optional[str] = None
 
 
 # ── API Routers ────────────────────────────────────────────────────────────────
