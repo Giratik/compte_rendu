@@ -19,7 +19,7 @@ OVERLAP_WORDS_MIN = int(os.environ.get("OVERLAP_WORDS_MIN", 0))
 OVERLAP_WORDS_MAX = int(os.environ.get("OVERLAP_WORDS_MAX", 500))
 OVERLAP_WORDS_STEP = int(os.environ.get("OVERLAP_WORDS_STEP", 50))
 
-from config.prompts import DEFAULT_COMP_SYSTEM, DEFAULT_CHUNK_SYSTEM, DEFAULT_GLOBAL_SYSTEM
+from config.prompts import DEFAULT_CHUNK_SYSTEM, DEFAULT_GLOBAL_SYSTEM
 
 
 def render_summarizer():
@@ -28,8 +28,6 @@ def render_summarizer():
         st.session_state.prompt_chunk_system = DEFAULT_CHUNK_SYSTEM
     if "prompt_global_system" not in st.session_state:
         st.session_state.prompt_global_system = DEFAULT_GLOBAL_SYSTEM
-    if "prompt_comp_system" not in st.session_state:
-        st.session_state.prompt_comp_system = DEFAULT_COMP_SYSTEM
     if st.session_state.transcript_text:
         st.markdown("---")
         st.write("### Génération du  Compte-rendu")
@@ -176,18 +174,25 @@ def render_summarizer():
 
     col_b1, col_b2, col_b3, col_b4, _ = st.columns([1, 1, 1, 1, 1])
     with col_b1:
-        run_all = st.button("▶ Analyser tout", use_container_width=True)
+            # Grisé si un traitement est en cours
+            run_all = st.button("▶ Analyser tout", use_container_width=True, disabled=st.session_state.processing)
+        
     with col_b2:
-        run_missing = st.button("⟳ Manquants", use_container_width=True)
+        # Grisé si un traitement est en cours
+        run_missing = st.button("⟳ Manquants", use_container_width=True, disabled=st.session_state.processing)
+        
     with col_b3:
+        # Combiner la logique de reprise avec le verrouillage de traitement
         resume_btn = st.button(
             f"↺ Reprendre ({n_missing})" if can_resume else "↺ Reprendre",
             use_container_width=True,
-            disabled=not can_resume,
+            disabled=(not can_resume) or st.session_state.processing, # <-- AJOUT ICI
             help="Reprend depuis le dernier chunk non analysé" if can_resume else "Aucune reprise disponible",
         )
+        
     with col_b4:
-        reset_btn = st.button("✕ Réinitialiser", use_container_width=True)
+        # Empêcher la réinitialisation pendant que ça tourne
+        reset_btn = st.button("✕ Réinitialiser", use_container_width=True, disabled=st.session_state.processing)
     st.markdown('<div style="text-align: left; margin-bottom: 10px;"><a href="#compte-rendu-global" style="color: #87CEEB; text-decoration: none; font-family: \'JetBrains Mono\', monospace; font-size: 0.8rem;">👇 Aller au bas de la page une fois le traitement terminé</a></div>', unsafe_allow_html=True)
 
     if reset_btn:
@@ -344,22 +349,28 @@ def render_summarizer():
         )
 
     col_g1, col_g2, _ = st.columns([1.2, 1.2, 4])
+    
     with col_g1:
         gen_global = st.button(
             f"✦ Générer ({n_done}/{n})",
             use_container_width=True,
-            # 👇 On verrouille le bouton si 0 résumé OU si la case n'est pas cochée
-            disabled=(n_done == 0) or not disclaimer_accepted,
+            # 👇 On verrouille si : 0 résumé fini OU case non cochée OU un traitement d'analyse est en cours
+            disabled=(n_done == 0) or not disclaimer_accepted or st.session_state.processing,
         )
     # Génération automatique du compte-rendu final si le mode automatique est activé
     if (st.session_state.get("auto_process_enabled", False) and
         n_done == n and n_done > 0 and  # Tous les résumés sont terminés
         not st.session_state.global_summary and  # Pas encore de compte-rendu global
         disclaimer_accepted):
-        with st.spinner("Extraction des comparatifs…"):
-            comparisons = requests.post(f"{API_URL}/extract_comparisons/", json={"chunks": st.session_state.chunks, "model": selected_model, "custom_system_prompt": st.session_state.prompt_comp_system}).json()
-        with st.spinner("Génération du compte-rendu global…"):
-            st.session_state.global_summary = requests.post(f"{API_URL}/generate_global_summary/", json={"summaries": summaries_done, "comparisons": comparisons, "model": selected_model, "custom_system_prompt": st.session_state.prompt_global_system}).json()
+        with st.spinner("Génération du compte-rendu global final..."):
+            st.session_state.global_summary = requests.post(
+                f"{API_URL}/generate_global_summary/", 
+                json={
+                    "summaries": summaries_done,
+                    "model": selected_model,
+                    "custom_system_prompt": st.session_state.prompt_global_system
+                }
+            ).json()
         st.toast("📋 Compte-rendu global généré automatiquement !", icon="📋")
     #with col_g2:
     #    if st.session_state.global_summary:
@@ -367,11 +378,15 @@ def render_summarizer():
     #            st.code(st.session_state.global_summary, language=None)
 
     if gen_global and summaries_done:
-        with st.spinner("Extraction des comparatifs…"):
-            comparisons = requests.post(f"{API_URL}/extract_comparisons/", json={"chunks": st.session_state.chunks, "model": selected_model, "custom_system_prompt": st.session_state.prompt_comp_system}).json() # pointe vers chunk_analysis.py
-        with st.spinner("Génération du compte-rendu global…"):
-
-            st.session_state.global_summary = requests.post(f"{API_URL}/generate_global_summary/", json={"summaries": summaries_done, "comparisons": comparisons, "model": selected_model, "custom_system_prompt": st.session_state.prompt_global_system}).json() # pointe vers chunk_analysis.py
+        with st.spinner("Génération du compte-rendu global final..."):
+            st.session_state.global_summary = requests.post(
+                f"{API_URL}/generate_global_summary/", 
+                json={
+                    "summaries": summaries_done,
+                    "model": selected_model,
+                    "custom_system_prompt": st.session_state.prompt_global_system
+                }
+            ).json() # pointe vers chunk_analysis.py
 
     if st.session_state.global_summary:
 

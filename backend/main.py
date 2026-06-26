@@ -19,8 +19,6 @@ app.include_router(transcription.router)
 
 app.include_router(chunks_summary.router_chunk_split)
 app.include_router(chunks_summary.router_summarize)
-#app.include_router(human_like.router_synthesize)
-app.include_router(chunks_summary.router_extract_comparisons)
 app.include_router(chunks_summary.router_generate_global_summary)
 
 # --- MODÈLES DE DONNÉES (Pour valider les requêtes JSON) ---
