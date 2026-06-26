@@ -7,6 +7,7 @@ import uuid
 
 from plugins.transcriber_ui import render_transcriber
 from plugins.chunks_summary_ui import render_summarizer
+from pages.Configuration import set_rag_stats
 LOGO_PATH = "ressource/Eau_de_Paris_bleu.svg.png"
 # --- Configuration ---
 st.set_page_config(page_title="Transcription & Résumé", layout="wide")
@@ -30,7 +31,8 @@ for key in ["transcript_text", "format_instructions_fichier", "final_summary", "
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
 
-
+if "rag_config" not in st.session_state:
+    st.session_state.rag_config = set_rag_stats()
 # --- Sidebar avec options ---
 with st.sidebar:
     st.markdown("### ⚙️ Options")

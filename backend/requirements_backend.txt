@@ -22,3 +22,5 @@ markdown
 typing-extensions
 
 transformers == 5.9.0
+
+chromadb

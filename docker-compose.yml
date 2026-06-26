@@ -20,6 +20,13 @@ services:
       # Permet à la librairie python "ollama" de trouver le Ollama local
       - OLLAMA_HOST=http://10.75.12.5:11434
       - DEBUG_LOG_TOGGLE=OFF
+      - EMBEDDING_MODEL=embeddinggemma:latest
+      # ← ChromaDB joignable via son nom de service sur chroma_net
+      - CHROMA_HOST=chromadb
+      - CHROMA_PORT=8000
+    networks:
+      - default
+      - chroma_net   # ← rejoint le réseau ChromaDB
 
   frontend:
     build: 
@@ -56,3 +63,8 @@ services:
       - OVERLAP_WORDS_STEP=50
     depends_on:
       - backend
+
+networks:
+  default: {}
+  chroma_net:
+    external: true   # ← réseau déclaré dans l'autre docker-compose

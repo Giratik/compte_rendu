@@ -1,6 +1,7 @@
 
 from minutes_redactor_tools.routers import chunks_summary
 from transcription_tools.routers import transcription
+from routers import rag_engine_router
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel
@@ -20,6 +21,7 @@ app.include_router(transcription.router)
 app.include_router(chunks_summary.router_chunk_split)
 app.include_router(chunks_summary.router_summarize)
 app.include_router(chunks_summary.router_generate_global_summary)
+app.include_router(rag_engine_router.router)
 
 # --- MODÈLES DE DONNÉES (Pour valider les requêtes JSON) ---
 
