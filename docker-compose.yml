@@ -10,7 +10,7 @@ services:
       - /home/paulvidouze/.cache/huggingface:/root/.cache/huggingface
       - /home/paulvidouze/.cache/torch:/root/.cache/torch
     ports:
-      - "8001:8001" # Aligné avec uvicorn
+      - "8001:8000" # Aligné avec uvicorn
     runtime: nvidia    
 
     environment:
@@ -29,7 +29,7 @@ services:
     ports:
       - "8502:8501" 
     environment:
-      - API_URL=http://backend:8001
+      - API_URL=http://backend:8000
 
       - OLLAMA_DEFAULT_MODEL=gemma4:e4b
       - TAILLE_MORCEAU=2000

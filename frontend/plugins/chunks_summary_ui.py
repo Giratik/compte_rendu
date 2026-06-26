@@ -3,7 +3,7 @@ import os
 import requests
 
 
-API_URL = os.environ.get("API_URL", "http://localhost:8001")
+API_URL = os.environ.get("API_URL", "http://localhost:8000")
 DEFAULT_LLM_MODEL = os.environ.get("OLLAMA_DEFAULT_MODEL", "gemma4:e4b")
 CHUNK_CONTEXT_SIZE = os.environ.get("CHUNK_CONTEXT_SIZE", 30000)
 FULL_SUMMARY_CONTEXT_SIZE = os.environ.get("FULL_SUMMARY_CONTEXT_SIZE", 30000)

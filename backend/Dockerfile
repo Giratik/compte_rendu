@@ -35,7 +35,7 @@ RUN pip install git+https://github.com/m-bain/whisperX.git
 COPY . .
 
 # Expose le port de FastAPI
-EXPOSE 8001
+EXPOSE 8000
 
-# Lancement de l'API sur le port 8001
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "1"]
+# Lancement de l'API sur le port 8000
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

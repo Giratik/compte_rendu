@@ -4,7 +4,7 @@ import time
 import os
 import uuid
 
-API_URL = os.environ.get("API_URL", "http://localhost:8001")
+API_URL = os.environ.get("API_URL", "http://localhost:8000")
 WHISPER_MODEL = os.environ.get("WHISPER_MODEL", "large-v3")
 
 def render_transcriber():
