@@ -19,7 +19,7 @@ DEFAULT_CHUNK_SYSTEM = (
 )
 
 # LE NOUVEAU PROMPT GLOBAL FUSIONNÉ
-DEFAULT_GLOBAL_SYSTEM = (
+___DEFAULT_GLOBAL_SYSTEM = (
     "Tu es un assistant de prise de notes de réunion professionnel. "
     "On te fournit les notes chronologiques d'UNE SEULE réunion, découpée en parties pour l'analyse. "
     "Synthétise l'ensemble en un compte-rendu global unique, en français.\n\n"
@@ -32,25 +32,47 @@ DEFAULT_GLOBAL_SYSTEM = (
     "RÈGLE ABSOLUE : Ne parle jamais de 'série de réunions'. C'est une unique réunion."
 )
 
+DEFAULT_GLOBAL_SYSTEM = (f"""
+    Tu es un assistant de rédaction de compte-rendu professionnel. 
+    On te fournit deux types d'informations distinctes :
+    1. LES NOTES DE LA RÉUNION (Ta seule source de vérité narrative).
+    2. UN CONTEXTE DE RÉFÉRENCE INTERNE (Issu de la documentation de l'entreprise).
+                         
+    STRUCTURE ATTENDUE :
+    1. Liste des participants (si aucun mentionné, créé la partie mais laisse la vide)                     
+    2. Résumé exécutif (2-3 phrases)
+    3. Points clés abordés
+    4. Décisions prises
+    5. Actions à mener (avec responsables si mentionnés)
+    6. Outils et Solutions (OPTIONNEL : À inclure UNIQUEMENT si des logiciels, produits, tarifs ou performances sont explicitement présentés ou comparés. Extraire les prix et avis mentionnés. Si aucun outil n'est mentionné, NE CRÉE PAS cette section).
+
+    RÈGLES STRICTES DE GÉNÉRATION :
+    - Le compte-rendu doit refléter UNIQUEMENT les événements, décisions et discussions qui ont eu lieu dans "LES NOTES DE LA RÉUNION".
+    - Le "CONTEXTE DE RÉFÉRENCE INTERNE" sert EXCLUSIVEMENT à :
+    * Expliciter les acronymes ou termes techniques mentionnés pendant la réunion (ex: remplacer un acronyme obscur par sa définition claire).
+    * Corriger l'orthographe des noms propres, projets ou outils mentionnés s'ils ont été mal transcrits.
+    * Harmoniser le vocabulaire technique avec les normes de l'entreprise.
+    - INTERDICTION ABSOLUE d'ajouter des faits, des chiffres, des tâches ou des détails issus du contexte de référence si ceux-ci n'ont pas été explicitement évoqués dans les notes de la réunion. Si le contexte mentionne un budget de 50k€ mais que la réunion n'en parle pas, ce budget ne doit PAS apparaître.
+""")
+
 
 def set_rag_stats():
-    # J'assume que list_collections() est appelée correctement ici, 
-    # potentiellement en lui passant ton client ChromaDB si nécessaire.
-    collections_disponibles = list_collections()
+    try:
+        collections_disponibles = list_collections()
+    except Exception as e:
+        # Si l'API renvoie une erreur (ex: 500 ChromaDB injoignable), on évite le crash
+        print(f"Attention, impossible de récupérer les collections : {e}")
+        collections_disponibles = []
     
     # Sécurité : au cas où ChromaDB est vide ou inaccessible
     if not collections_disponibles:
         s = "aucune_collection"
     else:
-        # Recherche regex : on cherche "RH" (insensible à la casse grâce à re.IGNORECASE)
-        # c'est-à-dire que ça matchera "rh", "RH", "documents_RH", "Rh_test", etc.
+        # Recherche regex...
         collection_infos = next(
             (c for c in collections_disponibles if re.search(r'informations_generales', c, re.IGNORECASE)), 
-            None # Valeur par défaut si rien n'est trouvé
+            None
         )
-        
-        # Si la regex trouve une correspondance, on l'utilise.
-        # Sinon (fallback), on prend le premier élément de la liste pour ne pas faire planter l'app.
         s = collection_infos if collection_infos else collections_disponibles[0]
 
     return {
@@ -64,9 +86,13 @@ if "prompt_chunk_system" not in st.session_state:
 if "prompt_global_system" not in st.session_state:
     st.session_state.prompt_global_system = DEFAULT_GLOBAL_SYSTEM
 
+# --- AJOUTEZ CES DEUX LIGNES ---
+if "rag_config" not in st.session_state:
+    st.session_state.rag_config = set_rag_stats()
+
 def render_config_page():
     st.title("⚙️ Configuration des Prompts (Session)")
-    st.markdown("Modifiez ici les instructions système...")
+    
 
     try:
         # 1. Récupération des collections via l'API frontend
@@ -91,6 +117,7 @@ def render_config_page():
         index_par_defaut = 0
 
     # 3. Affichage du menu déroulant
+    st.markdown("La collection à utiliser est 'informations_generales'")
     st.session_state.rag_config["collection"] = st.selectbox(
         "Collection ChromaDB", 
         options=collections_disponibles,
@@ -121,3 +148,6 @@ def render_config_page():
         st.session_state.prompt_global_system = DEFAULT_GLOBAL_SYSTEM
         st.success("Les prompts ont été réinitialisés avec succès !")
         st.rerun()
+
+if __name__ == "__main__":
+    render_config_page()

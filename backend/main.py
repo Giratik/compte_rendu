@@ -9,6 +9,7 @@ import os
 
 OLLAMA_URL = os.environ.get("OLLAMA_HOST", "http://localhost:11434" )
 DEBUG_LOG_TOGGLE = os.environ.get("DEBUG_LOG_TOGGLE", "OFF")
+ENABLE_LLM_REASONING = os.environ.get("ENABLE_LLM_REASONING", "True").lower() in ("true", "1", "yes")
 
 # Import de tes fonctions locales existantes
 

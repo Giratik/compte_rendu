@@ -9,7 +9,7 @@ import re
 import chromadb
 from chromadb.utils import embedding_functions
 
-from core import CHROMA_HOST, CHROMA_PORT, OLLAMA_HOST, EMBEDDING_MODEL
+from .core import CHROMA_HOST, CHROMA_PORT, OLLAMA_HOST, EMBEDDING_MODEL
 from typing import Any
 
 

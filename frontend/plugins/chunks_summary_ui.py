@@ -368,6 +368,7 @@ def render_summarizer():
                 json={
                     "summaries": summaries_done,
                     "model": selected_model,
+                    "collection_name": st.session_state.rag_config.get("collection", "aucune_collection"),
                     "custom_system_prompt": st.session_state.prompt_global_system
                 }
             ).json()
@@ -384,6 +385,7 @@ def render_summarizer():
                 json={
                     "summaries": summaries_done,
                     "model": selected_model,
+                    "collection_name": st.session_state.rag_config.get("collection", "aucune_collection"),
                     "custom_system_prompt": st.session_state.prompt_global_system
                 }
             ).json() # pointe vers chunk_analysis.py

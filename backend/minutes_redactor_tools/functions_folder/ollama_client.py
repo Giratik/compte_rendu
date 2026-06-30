@@ -5,20 +5,22 @@ import httpx
 import os
 
 URL_OLLAMA = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+ENABLE_LLM_REASONING = os.environ.get("ENABLE_LLM_REASONING", "True").lower() in ("true", "1", "yes")
 client = AsyncClient(
     host=URL_OLLAMA,
     timeout=httpx.Timeout(connect=5.0, read=600.0, write=10.0, pool=5.0)
 )
 
 async def inferring_ollama(messages, model, temperature=0.4, stream=False,
-                            context_size=30000, seed=None, keep_alive=-1, **kwargs):
+                            context_size=30000, seed=None, keep_alive=-1, think=False, **kwargs):
+
     start = time.time()
     try:
         response = await client.chat(
             model=model,
             messages=messages,
             keep_alive=keep_alive,
-            options={"temperature": temperature, "num_ctx": context_size, "seed": seed},
+            options={"temperature": temperature, "num_ctx": context_size, "seed": seed, "think": think},
             stream=stream
         )
         duration = time.time() - start

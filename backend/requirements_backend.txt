@@ -23,4 +23,4 @@ typing-extensions
 
 transformers == 5.9.0
 
-chromadb
+chromadb==0.5.3

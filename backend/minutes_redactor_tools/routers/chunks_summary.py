@@ -7,6 +7,7 @@ from minutes_redactor_tools.functions_folder.chunk_analysis import (
     split_into_chunks,
     summarize_chunk,
     generate_global_summary,
+    generate_global_summary_with_rag,
 )
 
 from typing import Optional
@@ -40,12 +41,20 @@ class GenerateGlobalSummaryRequest(BaseModel):
 
     custom_system_prompt: Optional[str] = None
 
+class TranscriptionAnalysisRequest(BaseModel):
+    text: str
+    model: str
+    collection_name: Optional[str] = "aucune_collection" # Ajout du champ par défaut
+
+    custom_system_prompt: Optional[str] = None
+
 
 # ── API Routers ────────────────────────────────────────────────────────────────
 
 router_chunk_split = APIRouter(prefix="/split_into_chunks", tags=["chunk_splitting"])
 router_summarize = APIRouter(prefix="/summarize_chunk", tags=["summarize_chunk"])
 router_generate_global_summary = APIRouter(prefix="/generate_global_summary", tags=["generate_global_summary"])
+router_generate_global_summary_with_rag = APIRouter(prefix="/generate_global_summary_with_rag", tags=["generate_global_summary_with_rag"])
 
 
 # ── Endpoints ──────────────────────────────────────────────────────────────────
@@ -60,7 +69,7 @@ async def api_split_into_chunks(request: ChunkSplitRequest):
 @router_summarize.post("/")
 async def api_summarize_chunk(request: SummarizeChunkRequest) -> str:
     """Summarize a single transcript chunk as live meeting notes."""
-    return await summarize_chunk(request.chunk, request.model, request.chunk_index, request.total_chunks)
+    return await summarize_chunk(request.chunk, request.model, request.chunk_index, request.total_chunks, request.custom_system_prompt)
 
 
 @router_generate_global_summary.post("/")
@@ -68,4 +77,16 @@ async def api_generate_global_summary(request: GenerateGlobalSummaryRequest) -> 
     """
     Generate a global meeting summary from chunk summaries.
     """
-    return await generate_global_summary(request.summaries, request.model)
+    return await generate_global_summary(request.summaries, request.model, request.custom_system_prompt)
+
+
+@router_generate_global_summary_with_rag.post("/")
+async def analyze_transcription_endpoint(request: TranscriptionAnalysisRequest):
+    # Lors de l'appel de votre fonction maîtresse, passez le paramètre
+    result = await generate_global_summary_with_rag(
+        text=request.text,
+        model=request.model,
+        collection_name=request.collection_name, # Transmission du paramètre
+        custom_system_prompt=request.custom_system_prompt
+    )
+    return result
