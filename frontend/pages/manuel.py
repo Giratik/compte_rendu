@@ -100,7 +100,7 @@ def render_manuel():
 
     # File selection
     
-    selected_file = "/app/ressource/manuel_compte-rendu.pdf"
+    selected_file = "/app/ressource/Manuel_utilisation_compte-rendu.pdf"
 
 
     if selected_file:

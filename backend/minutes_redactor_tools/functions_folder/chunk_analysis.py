@@ -7,6 +7,7 @@ Handles text splitting, summarization, and report generation.
 
 from typing import Optional
 import re
+from rag_communication.core import CONTEXT_SIZE
 from minutes_redactor_tools.functions_folder.ollama_client import inferring_ollama
 
 
@@ -68,7 +69,7 @@ async def summarize_chunk(chunk: str, model: str, chunk_index: int, total_chunks
         }
     ]
     try:
-        response = await inferring_ollama(messages, model)
+        response = await inferring_ollama(messages, model, context_size=CONTEXT_SIZE)
         return response.message.content
     except Exception as e:
         return f"⚠️ Erreur: {str(e)}"
@@ -149,7 +150,7 @@ async def generate_global_summary(summaries: list[str], model: str, custom_syste
         }
     ]
     try:
-        response = await inferring_ollama(messages, model)
+        response = await inferring_ollama(messages, model, context_size=CONTEXT_SIZE)
         return response.message.content
     except Exception as e:
         return f"⚠️ Erreur: {str(e)}"
@@ -335,7 +336,7 @@ async def generate_global_summary_with_rag(summaries: list[str], model: str, col
     ]
     
     try:
-        response = await inferring_ollama(messages, model) #
+        response = await inferring_ollama(messages, model, context_size=CONTEXT_SIZE) #
         return response.message.content
     except Exception as e:
         return f"⚠️ Erreur: {str(e)}"

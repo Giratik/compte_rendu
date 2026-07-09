@@ -1,3 +1,5 @@
+#frontend/plugins/transcriber_ui.py
+
 import streamlit as st
 import requests
 import time
@@ -76,7 +78,7 @@ def render_transcriber():
 
                     # Si c'est notre tour, on bascule is_transcribing à True
                     if st.session_state.transcription_queue_position == 1:
-                        st.success("🚀 C'est votre tour ! Démarrage imminent...")
+                        st.success("C'est votre tour ! Démarrage imminent...")
                         time.sleep(1)
                         st.session_state.is_transcribing = True
                         st.rerun()
@@ -149,9 +151,21 @@ def render_transcriber():
         uploaded_text = st.file_uploader("Déposez votre fichier texte (.txt)", type=["txt"], key="txt_uploader")
         if uploaded_text is not None:
             if st.button("Charger ce texte", key="btn_load_txt"):
-                st.session_state.transcript_text = uploaded_text.getvalue().decode("utf-8")
-                token_count = len(st.session_state.transcript_text.split())
-                st.session_state.token_count = token_count
-                st.success("✅ Fichier texte chargé avec succès !")
-                if 'token_count' in st.session_state:
-                    st.info(f"📊 Nombre de tokens dans le transcript : {st.session_state.token_count}")
+                try:
+                    # Try UTF-8 first
+                    file_content = uploaded_text.getvalue().decode("utf-8")
+                except UnicodeDecodeError:
+                    try:
+                        # Fall back to Latin-1 (ISO-8859-1) which can handle all byte values
+                        file_content = uploaded_text.getvalue().decode("latin-1")
+                    except Exception as e:
+                        st.error(f"❌ Erreur lors du chargement du fichier : {str(e)}")
+                        file_content = None
+
+                if file_content is not None:
+                    st.session_state.transcript_text = file_content
+                    token_count = len(st.session_state.transcript_text.split())
+                    st.session_state.token_count = token_count
+                    st.success("✅ Fichier texte chargé avec succès !")
+                    if 'token_count' in st.session_state:
+                        st.info(f"📊 Nombre de tokens dans le transcript : {st.session_state.token_count}")

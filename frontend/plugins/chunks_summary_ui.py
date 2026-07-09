@@ -5,19 +5,19 @@ import requests
 
 API_URL = os.environ.get("API_URL", "http://localhost:8000")
 DEFAULT_LLM_MODEL = os.environ.get("OLLAMA_DEFAULT_MODEL", "gemma4:e4b")
-CHUNK_CONTEXT_SIZE = os.environ.get("CHUNK_CONTEXT_SIZE", 30000)
-FULL_SUMMARY_CONTEXT_SIZE = os.environ.get("FULL_SUMMARY_CONTEXT_SIZE", 30000)
+CHUNK_CONTEXT_SIZE = os.environ.get("CHUNK_CONTEXT_SIZE", 22000)
+FULL_SUMMARY_CONTEXT_SIZE = os.environ.get("FULL_SUMMARY_CONTEXT_SIZE", 22000)
 TEMPERATURE = os.environ.get("TEMPERATURE", 0.15)
 
 CHUNK_WORDS_DEFAULT = int(os.environ.get("CHUNK_WORDS_DEFAULT", 6000)) # On passe de 300 à 6000
-CHUNK_WORDS_MIN = int(os.environ.get("CHUNK_WORDS_MIN", 1000))
+
 CHUNK_WORDS_MAX = int(os.environ.get("CHUNK_WORDS_MAX", 12000)) # Plafond haut
-CHUNK_WORDS_STEP = int(os.environ.get("CHUNK_WORDS_STEP", 500))
+
 
 OVERLAP_WORDS_DEFAULT = int(os.environ.get("OVERLAP_WORDS_DEFAULT", 150)) # Légèrement augmenté pour lier les gros blocs
-OVERLAP_WORDS_MIN = int(os.environ.get("OVERLAP_WORDS_MIN", 0))
+
 OVERLAP_WORDS_MAX = int(os.environ.get("OVERLAP_WORDS_MAX", 500))
-OVERLAP_WORDS_STEP = int(os.environ.get("OVERLAP_WORDS_STEP", 50))
+
 
 from config.prompts import DEFAULT_CHUNK_SYSTEM, DEFAULT_GLOBAL_SYSTEM
 
@@ -35,36 +35,17 @@ def render_summarizer():
         
         transcript_editor = st.text_area("Texte à analyser", value=st.session_state.transcript_text, height=250)
         transcript_editor = st.session_state.transcript_text
-    # ── Header ────────────────────────────────────────────────────────────────────
-    #st.markdown("""
-    #<div class="title-block">
-    #    <h1>Meeting <span>Notes</span> AI</h1>
-    #    <p>→ transcription → chunks → analyse ollama → compte-rendu</p>
-    #</div>
-    #""", unsafe_allow_html=True)
+
         raw_text = transcript_editor #.read().decode("utf-8", errors="replace")
-        #clean_text = remove_timestamps(raw_text) if remove_ts else raw_text
-        #chunks = split_into_chunks(clean_text, chunk_words, overlap_words)
+
         words_list = raw_text.split()
         total_words = len(words_list)
 
-    # ── Sidebar ───────────────────────────────────────────────────────────────────
-    #with st.sidebar:
-    #    st.markdown('<div class="col-header">⚙ Configuration</div>', unsafe_allow_html=True)
+
 
         selected_model = DEFAULT_LLM_MODEL
 
-        #chunk_words = st.slider(
-        #    "Taille des chunks (mots)",
-        #    min_value=CHUNK_WORDS_MIN, max_value=CHUNK_WORDS_MAX,
-        #    value=CHUNK_WORDS_DEFAULT, step=CHUNK_WORDS_STEP,
-        #)
-        #overlap_words = st.slider(
-        #    "Chevauchement (mots)",
-        #    min_value=OVERLAP_WORDS_MIN, max_value=OVERLAP_WORDS_MAX,
-        #    value=OVERLAP_WORDS_DEFAULT, step=OVERLAP_WORDS_STEP,
-        #)
-
+ 
 # ── Calcul dynamique de la taille de chunk optimale ──
 
         if total_words <= 12000:
@@ -83,41 +64,6 @@ def render_summarizer():
 
         # Assurons-nous que chunk_words ne dépasse JAMAIS la limite MAX
         chunk_words = min(chunk_words, CHUNK_WORDS_MAX)
-        #remove_ts = st.checkbox("Supprimer les timestamps", value=True)
-
-#        st.markdown("---")
-#        host_label = OLLAMA_URL.replace("http://", "")
-#        st.markdown(
-#            f'<div style="color:#4b5563;font-size:0.7rem;font-family:\'JetBrains Mono\',monospace;">'
-#            f'Ollama @ {host_label}</div>',
-#            unsafe_allow_html=True,
-#        )
-#        connected, status = check_connection()
-#        color = "#22c55e" if connected else "#ef4444"
-#        st.markdown(
-#            f'<div style="color:{color};font-size:0.7rem;font-family:\'JetBrains Mono\',monospace;">'
-#            f'● {status}</div>',
-#            unsafe_allow_html=True,
-#        )
-
-
-    # ── File upload ───────────────────────────────────────────────────────────────
-    #uploaded_file = st.file_uploader(
-    #    "Déposez votre transcription (.txt)", type=["txt"], label_visibility="collapsed"
-    #)
-#
-    #if not uploaded_file:
-    #    st.markdown("""
-    #    <div style="text-align:center;padding:5rem 2rem;color:#2a2d35;
-    #                font-family:'JetBrains Mono',monospace;font-size:0.85rem;">
-    #        <div style="font-size:3rem;margin-bottom:1rem;opacity:0.3">📋</div>
-    #        <div>Déposez un fichier .txt pour commencer</div>
-    #        <div style="font-size:0.7rem;margin-top:0.5rem;color:#1e2128">
-    #            Formats supportés : transcription brute, avec timestamps HH:MM:SS, [HH:MM]
-    #        </div>
-    #    </div>""", unsafe_allow_html=True)
-    #    st.stop()
-
 
 
 

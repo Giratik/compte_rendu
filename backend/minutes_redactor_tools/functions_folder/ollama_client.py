@@ -11,8 +11,10 @@ client = AsyncClient(
     timeout=httpx.Timeout(connect=5.0, read=600.0, write=10.0, pool=5.0)
 )
 
+CONTEXT_SIZE = int(os.environ.get("CONTEXT_SIZE", 22000))
+
 async def inferring_ollama(messages, model, temperature=0.4, stream=False,
-                            context_size=30000, seed=None, keep_alive=-1, think=False, **kwargs):
+                            context_size=CONTEXT_SIZE, seed=None, keep_alive=300, think=False, **kwargs):
 
     start = time.time()
     try:

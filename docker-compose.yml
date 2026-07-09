@@ -22,6 +22,8 @@ services:
       # ← ChromaDB joignable via son nom de service sur chroma_net
       - CHROMA_HOST=chromadb
       - CHROMA_PORT=8000
+
+      - CONTEXT_SIZE=22000
     deploy:
       resources:
         limits:
@@ -47,10 +49,10 @@ services:
       - "8502:8501"
     environment:
       - API_URL=http://backend:8000
-      - OLLAMA_DEFAULT_MODEL=qwen3.5:9b
+      - OLLAMA_DEFAULT_MODEL=gemma4:e4b
       - TAILLE_MORCEAU=2000
-      - CHUNK_CONTEXT_SIZE=30000
-      - FULL_SUMMARY_CONTEXT_SIZE=30000
+      - CHUNK_CONTEXT_SIZE=22000
+      - FULL_SUMMARY_CONTEXT_SIZE=22000
       - WHISPER_MODEL=large-v3
       - TEMPERATURE=0.15
       - NB_CHUNKS=3

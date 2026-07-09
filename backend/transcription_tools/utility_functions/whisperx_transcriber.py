@@ -67,8 +67,8 @@ async def transcribe_audio_with_whisperx(
     audio_path: str,
     model_choice: str = "large-v3",
     device: str = "cuda",
-    batch_size: int = 16,
-    compute_type: str = "float16"
+    batch_size: int = 4,
+    compute_type: str = "int8"
 ) -> str:
     """
     Transcribe audio using WhisperX with alignment.
