@@ -24,10 +24,10 @@ def render_transcriber():
         st.session_state.transcription_queue_position = None
 
     input_mode = st.radio(
-        "Comment voulez-vous fournir le texte ?",
-        ["Fichier Audio/Vidéo", "Fichier Texte existant (.txt)"],
-        horizontal=True,
-        key="transcriber_input_mode"
+    "Comment voulez-vous fournir le texte ?",
+    ["Fichier Audio/Vidéo", "Fichier Texte existant (.txt/.docx)", "Coller du texte"],
+    horizontal=True,
+    key="transcriber_input_mode"
     )
 
     if input_mode == "Fichier Audio/Vidéo":
@@ -147,25 +147,67 @@ def render_transcriber():
                     st.session_state.is_transcribing = False
                     st.rerun()
 
-    elif input_mode == "Fichier Texte existant (.txt)":
-        uploaded_text = st.file_uploader("Déposez votre fichier texte (.txt)", type=["txt"], key="txt_uploader")
+    elif input_mode == "Fichier Texte existant (.txt/.docx)":
+        uploaded_text = st.file_uploader(
+            "Déposez votre fichier texte",
+            type=["txt", "docx"],
+            key="txt_uploader"
+        )
         if uploaded_text is not None:
-            if st.button("Charger ce texte", key="btn_load_txt"):
+            if st.button("Charger ce fichier", key="btn_load_txt"):
+                file_content = None
                 try:
-                    # Try UTF-8 first
-                    file_content = uploaded_text.getvalue().decode("utf-8")
-                except UnicodeDecodeError:
-                    try:
-                        # Fall back to Latin-1 (ISO-8859-1) which can handle all byte values
-                        file_content = uploaded_text.getvalue().decode("latin-1")
-                    except Exception as e:
-                        st.error(f"❌ Erreur lors du chargement du fichier : {str(e)}")
-                        file_content = None
+                    if uploaded_text.name.lower().endswith(".docx"):
+                        from docx import Document
+                        import io
+
+                        doc = Document(io.BytesIO(uploaded_text.getvalue()))
+                        # Paragraphes + tableaux, dans l'ordre du document
+                        parts = []
+                        for para in doc.paragraphs:
+                            if para.text.strip():
+                                parts.append(para.text)
+                        for table in doc.tables:
+                            for row in table.rows:
+                                row_text = " | ".join(cell.text.strip() for cell in row.cells)
+                                if row_text.strip(" |"):
+                                    parts.append(row_text)
+                        file_content = "\n".join(parts)
+
+                        if not file_content.strip():
+                            st.warning("⚠️ Le fichier Word semble vide ou ne contient pas de texte extractible.")
+                            file_content = None
+                    else:
+                        # .txt
+                        try:
+                            file_content = uploaded_text.getvalue().decode("utf-8")
+                        except UnicodeDecodeError:
+                            file_content = uploaded_text.getvalue().decode("latin-1")
+
+                except Exception as e:
+                    st.error(f"❌ Erreur lors du chargement du fichier : {str(e)}")
+                    file_content = None
 
                 if file_content is not None:
                     st.session_state.transcript_text = file_content
                     token_count = len(st.session_state.transcript_text.split())
                     st.session_state.token_count = token_count
-                    st.success("✅ Fichier texte chargé avec succès !")
-                    if 'token_count' in st.session_state:
-                        st.info(f"📊 Nombre de tokens dans le transcript : {st.session_state.token_count}")
+                    st.success("✅ Fichier chargé avec succès !")
+                    st.info(f"📊 Nombre de tokens dans le transcript : {st.session_state.token_count}")
+
+    elif input_mode == "Coller du texte":
+        pasted_text = st.text_area(
+            "Collez votre texte ici",
+            height=300,
+            key="pasted_text_area",
+            placeholder="Collez votre transcript"
+        )
+        if st.button("Charger ce texte", key="btn_load_pasted"):
+            if pasted_text.strip():
+                st.session_state.transcript_text = pasted_text
+                token_count = len(st.session_state.transcript_text.split())
+                st.session_state.token_count = token_count
+                st.success("✅ Texte chargé avec succès !")
+                st.info(f"📊 Nombre de tokens dans le transcript : {st.session_state.token_count}")
+            else:
+                st.warning("⚠️ Le champ de texte est vide.")
